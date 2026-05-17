@@ -45,6 +45,18 @@ python scripts/generate_action_plan.py --inventory reports/inventory.json --clas
 python scripts/generate_action_plan_report.py --input reports/proposed_actions.json --output reports/action_plan_report.html
 ```
 
+## Open generated HTML reports on Windows
+
+Use `.\reports\...` to avoid malformed paths such as `reportsaction_plan_report.html`.
+
+```powershell
+Invoke-Item .\reports\inventory_report.html
+Invoke-Item .\reports\classification_report.html
+Invoke-Item .\reports\action_plan_report.html
+```
+
+Implementers should not auto-open reports with `start` or `Invoke-Item` during validation unless explicitly requested by the user. Prefer generating the report and confirming that the file exists.
+
 ## Git rules
 
 Allowed:

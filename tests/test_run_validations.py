@@ -552,5 +552,65 @@ class TestFirstRunCheckIntegration(unittest.TestCase):
                       "first-run check should be labelled 'full only' in --list")
 
 
+# ── ARCH-0388..0391: quick/no-demo skip output clarity ───────────────────────
+
+class TestQuickSkipOutput(unittest.TestCase):
+    """ARCH-0389/0390: --quick prints [SKIP] for all full-only steps."""
+
+    def _capture_quick(self):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(0)):
+            with redirect_stdout(buf):
+                rv.main(["--quick"])
+        return buf.getvalue()
+
+    def test_quick_skip_message_first_run_check(self):
+        """ARCH-0389: --quick prints [SKIP] for first-run check."""
+        out = self._capture_quick()
+        self.assertIn("[SKIP] first-run check", out,
+                      "--quick must print [SKIP] for first-run check")
+
+    def test_quick_skip_message_unittest(self):
+        """ARCH-0390: --quick prints [SKIP] for unittest discover."""
+        out = self._capture_quick()
+        self.assertIn("[SKIP] unittest discover", out,
+                      "--quick must print [SKIP] for unittest discover")
+
+    def test_quick_skip_message_synthetic_demo(self):
+        """ARCH-0390: --quick prints [SKIP] for synthetic demo."""
+        out = self._capture_quick()
+        self.assertIn("[SKIP] synthetic demo", out,
+                      "--quick must print [SKIP] for synthetic demo")
+
+
+class TestNoDemoFirstRunCheck(unittest.TestCase):
+    """ARCH-0391: --no-demo skips only synthetic demo, not first-run check."""
+
+    def test_no_demo_runs_first_run_check(self):
+        """ARCH-0391: --no-demo must not skip first-run check."""
+        calls = []
+        def _fake(argv, **kw):
+            calls.append(argv)
+            return _make_result(0)
+        with patch("scripts.run_validations.subprocess.run", side_effect=_fake):
+            rv.main(["--no-demo"])
+        flat = [str(a) for argv in calls for a in argv]
+        self.assertTrue(any("run_first_time_check" in c for c in flat),
+                        "--no-demo must not skip first-run check")
+
+    def test_no_demo_does_not_print_skip_for_first_run_check(self):
+        """ARCH-0391: --no-demo output must not show [SKIP] for first-run check."""
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(0)):
+            with redirect_stdout(buf):
+                rv.main(["--no-demo"])
+        self.assertNotIn("[SKIP] first-run check", buf.getvalue(),
+                         "--no-demo must not skip first-run check")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -90,7 +90,8 @@ def main(argv=None):
     parser.add_argument(
         "--quick",
         action="store_true",
-        help="Run only essential checks (skip unittest discover and synthetic demo).",
+        help="Run only essential checks (py_compile + validate_reports --help). "
+             "Skips all full-only steps: first-run check, unittest discover, synthetic demo.",
     )
     parser.add_argument(
         "--list",
@@ -113,7 +114,7 @@ def main(argv=None):
         print("Planned checks:")
         for label, _, skip_in_quick in _STEPS:
             mode = "quick+full" if not skip_in_quick else "full only "
-            print(f"  [{mode}] {label}")
+            print(f"  [{mode}]  {label}")
         return 0
 
     failures = []

@@ -80,6 +80,12 @@ python .\scripts\run_validations.py --list
 
 Exit codes: `0` all checks passed (or `--list`), `1` one or more checks failed.
 
+**Mode summary:**
+- `full` — runs all steps including full-only (first-run check, unittest, demo).
+- `--quick` — runs only essential steps (py_compile + validate_reports --help); skips all full-only steps.
+- `--list` — prints planned checks with mode labels, no subprocess, exit 0.
+- `--no-demo` — full mode minus synthetic demo; first-run check and unittest still run.
+
 ## Inventory example
 
 ```powershell

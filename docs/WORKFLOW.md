@@ -33,6 +33,8 @@ Create a folder **outside** the repository, for example `C:\Archivio_Test`, with
 python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output reports/inventory.json
 ```
 
+The source folder is scanned in read-only mode and is never modified.
+
 ## Step 3 — Generate the inventory HTML report
 
 ```powershell
@@ -45,6 +47,11 @@ python scripts/generate_inventory_report.py --input reports/inventory.json --out
 python scripts/classify_inventory.py --input reports/inventory.json --output reports/classifications.json
 ```
 
+`classify_inventory` reads only `inventory.json` metadata and does not read source file contents.
+
+- Files already inside existing folders are marked `keep_in_place`.
+- Files in the root of the scanned folder are marked `classify_only` (suggestion only).
+
 ## Step 5 — Generate the classification HTML report
 
 ```powershell
@@ -52,6 +59,13 @@ python scripts/generate_classification_report.py --input reports/classifications
 ```
 
 Review reports manually in browser. Do not auto-open during validation.
+
+## Review outputs and future phases
+
+- `reports/proposed_actions.json` is review-only (no execution).
+- `proposed_moves.json` is allowed only in a future controlled move phase.
+- Future local AI classification is allowed only without cloud API use for personal contents.
+- Optional controlled move is allowed only with explicit user approval per batch and a rollback plan.
 
 ## Post-task verification
 

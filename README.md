@@ -1,80 +1,54 @@
 # Archivio Personale AI
 
-A safe, dry-run inventory and classification system for a personal home file archive stored on a local PC or internal HDD.
+A safe, local-first helper for inventory and dry-run classification of a personal file archive on a local PC/internal HDD.
 
-## Current phase — Dry-run inventory and rule-based classification
+## Current status
 
-**Status:** local-first, review-only. Report HTML in italiano. The duplicate report has path, priority, context-bound, reclaimable, cross-folder, and same-filename filters. No automatic move, rename, or delete is proposed or implemented.
+- Phase: read-only inventory + rule-based dry-run classification + Italian HTML reports.
+- Mode: dry-run / read-only / review-only.
+- Forbidden operations: move, rename, delete, overwrite, or automatic folder reorganization.
+- Classification reads only `reports/inventory.json` (metadata flow), not source file contents.
 
-The current phase is strictly read-only and dry-run only.
+## Personal files
 
-This project does **not**:
-- move files
-- rename files
-- delete files
-- reorganize folders
-- apply any automatic operation to the source archive
+Do not commit real personal files to this repository.
+The source archive must stay outside the repo (for example `C:\Archivio_Test`).
 
-The classification step reads only `reports/inventory.json`; it does not read source file contents.
+## Operational guardrails
 
-All outputs are written to a user-specified output path — never inside the source archive by default.
+- One active implementer at a time: Claude Code (primary) or Codex (backup).
+- Before implementer switch: verify workspace clean/aligned.
+- Local user environment is Windows: use PowerShell for local commands.
 
-## Real personal files
+## Minimal usage
 
-**Do not commit real personal files to this repository.**
-The source archive must remain outside the repository, for example `C:\Archivio_Test` or your actual archive folder.
-
-## Requirements
-
-- Python 3.8+ (standard library only — no external packages required)
-
-## Usage
-
-### 1. Run a read-only inventory scan
-
-```bash
+```powershell
 python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output reports/inventory.json
-```
-
-### 2. Generate the inventory HTML report
-
-```bash
 python scripts/generate_inventory_report.py --input reports/inventory.json --output reports/inventory_report.html
-```
-
-### 3. Run dry-run classification
-
-```bash
 python scripts/classify_inventory.py --input reports/inventory.json --output reports/classifications.json
-```
-
-### 4. Generate the classification HTML report
-
-```bash
 python scripts/generate_classification_report.py --input reports/classifications.json --output reports/classification_report.html
 ```
 
-Open the generated HTML reports in a browser to review results.
-
-> **Warning:** Test first on a folder with fake files or disposable copies before running on your real archive.
+Do not auto-open reports with `start`, `Invoke-Item`, or equivalents unless explicitly requested by the user.
 
 ## Project structure
 
-```
-docs/           — project documentation and safety rules
-scripts/        — Python scripts
-tests/          — unit tests (use only temporary directories or in-memory data)
-reports/        — output reports (not committed; examples/ contains .gitkeep)
-workflows/n8n/  — future n8n integration notes
-```
+- `docs/` — rules, commands, workflow
+- `scripts/` — Python scripts (read-only/dry-run logic)
+- `tests/` — unit tests
+- `reports/` — generated outputs
+
+## Requirements
+
+- Python 3.8+ (standard library only)
 
 ## Running tests
 
-```bash
-python -m py_compile scripts/inventory_readonly.py scripts/generate_inventory_report.py scripts/classify_inventory.py scripts/generate_classification_report.py
+```powershell
+python -m py_compile scripts/inventory_readonly.py scripts/generate_inventory_report.py scripts/classify_inventory.py scripts/generate_classification_report.py scripts/generate_action_plan.py scripts/generate_action_plan_report.py
 python -m unittest discover -s tests -v
 ```
 
 ## Safety
 
-See [docs/SAFETY_RULES.md](docs/SAFETY_RULES.md) for the full list of rules.
+See `docs/SAFETY_RULES.md`.

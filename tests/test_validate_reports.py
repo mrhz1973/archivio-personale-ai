@@ -268,6 +268,44 @@ class TestMain(TmpMixin, unittest.TestCase):
         self.assertIn("OK: 1", output)
         self.assertIn("Errors: 1", output)
 
+    def test_directory_valid_but_no_html_returns_0(self):
+        # ARCH-0079: valid directory with no HTML files exits 0
+        d = self._make_tmpdir()
+        with open(os.path.join(d, "notes.txt"), "w", encoding="utf-8") as f:
+            f.write("not html")
+        code = main([d])
+        self.assertEqual(code, 0)
+
+    def test_explicit_directory_no_html_not_path_error(self):
+        # ARCH-0080: explicit dir with no HTML returns 0, not 2 (unlike missing path)
+        d = self._make_tmpdir()
+        code = main([d])
+        self.assertEqual(code, 0)
+        self.assertNotEqual(code, 2)
+
+    def test_safe_negated_wording_not_dangerous(self):
+        # ARCH-0081: "nessuna cancellazione automatica" must not be flagged as dangerous
+        content = (
+            '<!DOCTYPE html><html lang="it"><body>'
+            "<p>Nessuna cancellazione automatica. Solo revisione.</p>"
+            "</body></html>"
+        )
+        path = self._write_tmp(content)
+        status, messages = validate_file(path)
+        self.assertFalse(any("dangerous" in m for m in messages))
+
+    def test_safe_to_delete_without_context_fails(self):
+        # ARCH-0082: "safe to delete" without negation context is dangerous
+        content = (
+            '<!DOCTYPE html><html lang="it"><body>'
+            "<p>These files are safe to delete. Solo revisione.</p>"
+            "</body></html>"
+        )
+        path = self._write_tmp(content)
+        status, messages = validate_file(path)
+        self.assertEqual(status, "FAIL")
+        self.assertTrue(any("dangerous" in m for m in messages))
+
 
 if __name__ == "__main__":
     unittest.main()

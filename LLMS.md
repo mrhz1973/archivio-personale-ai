@@ -27,6 +27,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0045..ARCH-0054 | Batch 5 — tracking and report verification hardening | Closed — commit `4287ff1` |
 | ARCH-0055..ARCH-0064 | Batch 6 — auto-push policy and report validation tooling | Closed — commit `429592e` |
 | ARCH-0065..ARCH-0074 | Batch 7 — harden report validator | Closed — commit `63ad275` |
+| ARCH-0075..ARCH-0084 | Batch 8 — tracking cleanup and validator integration | Closed — commit pending |
 
 ## Current phase
 
@@ -193,6 +194,12 @@ Claude Code final output after an implementation batch must include:
 - push result;
 - final `git status --short --branch`;
 - confirmation that reports/ and personal files were not committed.
+
+## Task ID uniqueness rule
+
+New tasks must use IDs not already present in the task history. If an ID is accidentally reused, correct only the tracking entry in LLMS.md — no rebase, no force-push, no history rewrite.
+
+Tracking note: commit `a6bfade` (message: `ARCH-0065 add orchestrator prompt compactness rule`) is a micro-commit that reused the ARCH-0065 label after Batch 7 was already closed. It was committed outside the batch on the same topic. The Git history is not rewritten; it is recorded here as an out-of-band micro-commit.
 
 ## Documentation policy
 

@@ -116,35 +116,45 @@ def validate_file(path):
 def _collect_paths(argv):
     """
     Parse CLI arguments into a list of (path, is_explicit) tuples.
-    Returns (entries, error_message).
+    Returns (entries, empty_dirs, error_message).
+    empty_dirs lists directories that were found but contained no HTML files.
     error_message is non-None when CLI is invalid or an explicit path is missing.
     """
     if not argv:
-        return [(p, False) for p in DEFAULT_PATHS], None
+        return [(p, False) for p in DEFAULT_PATHS], [], None
 
     entries = []
+    empty_dirs = []
     for arg in argv:
         if os.path.isfile(arg):
             entries.append((arg, True))
         elif os.path.isdir(arg):
+            found = []
             for dirpath, _dirs, filenames in os.walk(arg):
                 for fn in sorted(filenames):
                     if fn.lower().endswith(".html"):
-                        entries.append((os.path.join(dirpath, fn), True))
+                        found.append((os.path.join(dirpath, fn), True))
+            if found:
+                entries.extend(found)
+            else:
+                empty_dirs.append(arg)
         else:
-            return [], f"path not found: '{arg}'"
+            return [], [], f"path not found: '{arg}'"
 
-    return entries, None
+    return entries, empty_dirs, None
 
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
-    entries, err = _collect_paths(argv)
+    entries, empty_dirs, err = _collect_paths(argv)
     if err:
         print(f"[ERROR] {err}", file=sys.stderr)
         return 2
+
+    for d in empty_dirs:
+        print(f"[INFO]  no HTML files found in: {d}")
 
     total = ok = warnings = errors = 0
     error_list = []

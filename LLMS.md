@@ -24,6 +24,7 @@ Implemented:
 - static HTML inventory report generator: `scripts/generate_inventory_report.py`;
 - rule-based dry-run classifier: `scripts/classify_inventory.py`;
 - static HTML classification report generator: `scripts/generate_classification_report.py`;
+- context preservation policy: files already inside existing folders are marked `keep_in_place`;
 - unit tests for inventory and classification;
 - lightweight project documentation.
 

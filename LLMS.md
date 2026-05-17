@@ -147,6 +147,22 @@ If a setting is not visible or not controllable, do not invent it — declare on
 
 After a push or merge, ChatGPT should verify the result on GitHub directly when available before asking the user for extra local status commands. Ask the user for local commands only when GitHub cannot answer the question or when local workspace state is genuinely needed.
 
+## Orchestrator prompt compactness rule
+
+When preparing prompts for Claude Code, ChatGPT orchestrator must not repeat rules already versioned in `LLMS.md`, `docs/COMMANDS.md`, or `README.md`.
+
+The prompt should tell Claude Code to read and follow those files, then include only:
+- task-specific objective;
+- task IDs;
+- authorized/forbidden files if not already obvious;
+- validation commands;
+- commit/push instruction when applicable;
+- new temporary constraints needed for that batch.
+
+If a new rule should become permanent, ChatGPT orchestrator must tell the user that it should be added to the repository and must get user authorization before asking Claude Code to add it.
+
+Keep prompts compact. Avoid bureaucratic restatements of rules already stored in the repo.
+
 ## Implementation prompt requirements
 
 Prompts to Claude Code must include: preflight commands, explicit file scope, validation commands, git diff/status checks, and commit instructions. This ensures the user does not need to run routine commands manually.

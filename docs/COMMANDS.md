@@ -61,8 +61,8 @@ Tests use synthetic data and temporary directories only. Do not reference `repor
 
 | Mode | Command | What runs |
 |------|---------|-----------|
-| full | `python .\scripts\run_validations.py` | py_compile + unittest discover + validate_reports --help + synthetic demo |
-| quick | `python .\scripts\run_validations.py --quick` | py_compile + validate_reports --help (skips unittest and demo) |
+| full | `python .\scripts\run_validations.py` | first-run check + py_compile + unittest discover + validate_reports --help + synthetic demo |
+| quick | `python .\scripts\run_validations.py --quick` | py_compile + validate_reports --help (skips all full-only steps: first-run check, unittest, demo) |
 | list | `python .\scripts\run_validations.py --list` | prints planned checks, exits 0, no subprocess |
 | quiet | `python .\scripts\run_validations.py --quiet` | any mode; suppresses [RUN]/[OK], keeps summary and errors |
 | no-demo | `python .\scripts\run_validations.py --no-demo` | full mode, skips synthetic demo (useful for debug) |

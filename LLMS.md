@@ -45,6 +45,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0345..ARCH-0354 | Batch 22B — first-run check tests and docs | Closed — commit `0f18d3c` |
 | ARCH-0355..ARCH-0364 | Batch 22C — first-run check CLI polish | Closed — commit `8fc098a` |
 | ARCH-0365..ARCH-0374 | Batch 23A — integrate first-run check in validation runner | Closed — commit `0596a98` |
+| ARCH-0375..ARCH-0384 | Batch 23B — first-run validation safety and docs alignment | Closed — commit pending |
 
 ## Current phase
 

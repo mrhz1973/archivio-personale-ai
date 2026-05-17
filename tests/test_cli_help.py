@@ -22,6 +22,7 @@ from scripts.generate_classification_report import main as _cls_rep_main
 from scripts.generate_action_plan_report import main as _ap_rep_main
 import scripts.validate_reports as vr
 import scripts.run_validations as rv
+import scripts.run_first_time_check as rftc
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ def _collect_help():
         "generate_action_plan_report":  _argparse_help(_ap_rep_main, "generate_action_plan_report.py"),
         "validate_reports":             _argv_help(vr.main),
         "run_validations":              _argv_help(rv.main),
+        "run_first_time_check":         _argparse_help(rftc.main, "run_first_time_check.py"),
     }
 
 
@@ -99,6 +101,9 @@ class TestHelpExitZero(unittest.TestCase):
 
     def test_run_validations_help_exits_zero(self):                 # ARCH-0172
         self._assert_exits_zero("run_validations")
+
+    def test_run_first_time_check_help_exits_zero(self):            # ARCH-0376
+        self._assert_exits_zero("run_first_time_check")
 
 
 # ── ARCH-0173: help text has no destructive-action language ──────────────────

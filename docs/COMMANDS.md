@@ -5,7 +5,7 @@ This file lists safe commands for the current phase. The source archive must rem
 ## Validation
 
 ```bash
-python -m py_compile scripts/inventory_readonly.py scripts/generate_inventory_report.py scripts/classify_inventory.py scripts/generate_classification_report.py
+python -m py_compile scripts/inventory_readonly.py scripts/generate_inventory_report.py scripts/classify_inventory.py scripts/generate_classification_report.py scripts/generate_action_plan.py scripts/generate_action_plan_report.py
 python -m unittest discover -s tests -v
 ```
 
@@ -31,6 +31,18 @@ python scripts/classify_inventory.py --input reports/inventory.json --output rep
 
 ```bash
 python scripts/generate_classification_report.py --input reports/classifications.json --output reports/classification_report.html
+```
+
+## Review-only action plan example
+
+```bash
+python scripts/generate_action_plan.py --inventory reports/inventory.json --classifications reports/classifications.json --output reports/proposed_actions.json
+```
+
+## Action plan HTML report example
+
+```bash
+python scripts/generate_action_plan_report.py --input reports/proposed_actions.json --output reports/action_plan_report.html
 ```
 
 ## Git rules

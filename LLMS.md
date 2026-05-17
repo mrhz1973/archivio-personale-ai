@@ -30,7 +30,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0075..ARCH-0084 | Batch 8 — tracking cleanup and validator integration | Closed — commit `2c087ee` |
 | ARCH-0085..ARCH-0094 | Batch 9 — validator CLI polish and tracking fix | Closed — commit `e073a64` |
 | ARCH-0095..ARCH-0104 | Batch 10 — report generator regression tests | Closed — commit `1566ea8` |
-| ARCH-0105..ARCH-0114 | Batch 11 — CLI smoke tests and docs consistency | Closed — commit pending |
+| ARCH-0105..ARCH-0114 | Batch 11 — CLI smoke tests and docs consistency | Closed — commit `1eada61` |
 
 ## Current phase
 

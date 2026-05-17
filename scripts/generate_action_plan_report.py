@@ -147,6 +147,18 @@ def build_html(data: dict) -> str:
   <h2>Exact Duplicate Groups (sorted by potential reclaimable size)</h2>
   <p>Exact duplicate candidates are based on identical SHA-256 hashes. All {duplicate_groups_count} groups are loaded; use the filters below to narrow the list.</p>
 
+  <details style="margin-bottom:1em;padding:0.8em 1em;background:#eef4ff;border:1px solid #b3cce8;border-radius:4px;">
+    <summary style="cursor:pointer;font-weight:bold;">How to use this report</summary>
+    <ul style="margin:0.5em 0 0 1em;font-size:0.9em;">
+      <li><strong>Search paths</strong> — type any part of a folder or file path to filter groups.</li>
+      <li><strong>Priority</strong> — filter by review priority assigned to each duplicate group.</li>
+      <li><strong>Context-bound</strong> — a file is context-bound when it lives inside an existing project or work folder; extra caution is needed before any future manual action.</li>
+      <li><strong>Cross-folder</strong> — groups where duplicate copies span more than one top-level folder.</li>
+      <li><strong>Same filename</strong> — groups where every duplicate file has the same filename.</li>
+      <li><strong>Potential reclaimable</strong> is theoretical: it assumes keeping exactly one copy per group. It is not a delete instruction. No deletion is proposed.</li>
+    </ul>
+  </details>
+
   <div class="filters">
     <label>
       Search paths:&nbsp;
@@ -167,7 +179,17 @@ def build_html(data: dict) -> str:
       <input type="checkbox" id="cb-reclaimable">
       show only groups with potential reclaimable &gt; 0
     </label>
-    <span>Showing <span id="group-count">…</span> of {duplicate_groups_count} groups</span>
+    <label>
+      <input type="checkbox" id="cb-cross-folder">
+      show only groups spanning multiple top-level folders
+    </label>
+    <label>
+      <input type="checkbox" id="cb-same-filename">
+      show only groups where all files have the same filename
+    </label>
+    <span>Showing <span id="group-count">…</span> of {duplicate_groups_count} groups
+      &nbsp;|&nbsp; Filtered potential reclaimable (theoretical): <span id="filtered-reclaimable">…</span>
+    </span>
   </div>
 
   <table id="dup-table">
@@ -216,10 +238,19 @@ def build_html(data: dict) -> str:
       }}).join("") + "</ul>";
       var sha = escHtml((g.sha256 || "").substring(0, 16)) + "…";
       var tr = document.createElement("tr");
+      var topFolders = g.files.map(function(f){{return f.top_level_folder||"";}});
+      var uniqueFolders = topFolders.filter(function(v,i){{return topFolders.indexOf(v)===i;}});
+      var basenames = g.files.map(function(f){{
+        var p = (f.relative_path||"").replace(/\\/g,"/");
+        return p.split("/").pop().toLowerCase();
+      }});
+      var sameFilename = basenames.length > 0 && basenames.every(function(b){{return b===basenames[0];}});
       tr.setAttribute("data-priority", g.review_priority || "");
       tr.setAttribute("data-has-context", g.files.some(function(f){{return f.context_bound;}}) ? "1" : "0");
       tr.setAttribute("data-reclaimable", String(g.potential_reclaimable_bytes || 0));
       tr.setAttribute("data-paths", g.files.map(function(f){{return (f.relative_path||"").toLowerCase();}}).join("|"));
+      tr.setAttribute("data-cross-folder", uniqueFolders.length > 1 ? "1" : "0");
+      tr.setAttribute("data-same-filename", sameFilename ? "1" : "0");
       tr.innerHTML =
         "<td>" + sha + "</td>" +
         "<td>" + escHtml(g.review_priority || "") + "<br><small>" + escHtml(g.review_priority_reason || "") + "</small></td>" +
@@ -240,23 +271,34 @@ def build_html(data: dict) -> str:
       var prioQ = document.getElementById("priority-filter").value;
       var cbCtx = document.getElementById("cb-context-bound").checked;
       var cbRec = document.getElementById("cb-reclaimable").checked;
+      var cbCross = document.getElementById("cb-cross-folder").checked;
+      var cbSame = document.getElementById("cb-same-filename").checked;
       var visible = 0;
+      var filteredReclaimable = 0;
       rows.forEach(function(r) {{
         var show = true;
         if (pathQ && r.getAttribute("data-paths").indexOf(pathQ) === -1) show = false;
         if (prioQ && r.getAttribute("data-priority") !== prioQ) show = false;
         if (cbCtx && r.getAttribute("data-has-context") !== "1") show = false;
         if (cbRec && parseInt(r.getAttribute("data-reclaimable"), 10) <= 0) show = false;
+        if (cbCross && r.getAttribute("data-cross-folder") !== "1") show = false;
+        if (cbSame && r.getAttribute("data-same-filename") !== "1") show = false;
         r.classList.toggle("hidden", !show);
-        if (show) visible++;
+        if (show) {{
+          visible++;
+          filteredReclaimable += parseInt(r.getAttribute("data-reclaimable"), 10) || 0;
+        }}
       }});
       document.getElementById("group-count").textContent = visible;
+      document.getElementById("filtered-reclaimable").textContent = fmtSize(filteredReclaimable);
     }}
 
     document.getElementById("path-filter").addEventListener("input", applyFilters);
     document.getElementById("priority-filter").addEventListener("change", applyFilters);
     document.getElementById("cb-context-bound").addEventListener("change", applyFilters);
     document.getElementById("cb-reclaimable").addEventListener("change", applyFilters);
+    document.getElementById("cb-cross-folder").addEventListener("change", applyFilters);
+    document.getElementById("cb-same-filename").addEventListener("change", applyFilters);
 
     applyFilters();
   }})();

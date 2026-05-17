@@ -15,6 +15,15 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 - **Local models**: preferred future AI layer for file/content classification.
 - **n8n VPS**: future optional scheduler/notification layer only; not active and not connected to local files in the current phase.
 
+## Task history
+
+| Task | Description | Outcome |
+|------|-------------|---------|
+| ARCH-0001 | Improve duplicate report filtering | Closed — commit `9c421c` |
+| ARCH-0002 | Local validation of filtered duplicate report | Validation-only — no commit |
+| ARCH-0003 | Document safe report opening command | Closed — commit `5f09dac` |
+| ARCH-0004..ARCH-0013 | Batch 1 — tracking, usability, local workflow cleanup | In progress |
+
 ## Current phase
 
 **Dry-run inventory + rule-based classification baseline.**
@@ -41,6 +50,8 @@ Not implemented:
 ## Operating doctrine
 
 Keep the project simple. The goal is to help the user understand and organize folders on their own computer, not to build an over-engineered automation platform.
+
+Batch execution rule: when a set of tasks requires no user decision, prefer task ranges (e.g. ARCH-0004..ARCH-0013) in a single implementation prompt. Use batches of up to 10 tasks. Stop only for real gates: move/rename/delete, source writes, cloud/API calls, Drive API, n8n/MCP, dependency installs, secrets exposure, or a required user decision.
 
 Rules:
 

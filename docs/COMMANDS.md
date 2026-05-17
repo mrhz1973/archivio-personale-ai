@@ -57,6 +57,29 @@ Invoke-Item .\reports\action_plan_report.html
 
 Implementers should not auto-open reports with `start` or `Invoke-Item` during validation unless explicitly requested by the user. Prefer generating the report and confirming that the file exists.
 
+## Commit message format
+
+Single-task commits:
+
+```
+ARCH-000X subject
+```
+
+Batch commits (multiple tasks, no user decision gates):
+
+```
+ARCH-000X..ARCH-000Y subject
+```
+
+The commit body or the LLMS.md task history must list what was included when a batch covers multiple logical items.
+
+## Validation-only tasks
+
+A task is validation-only when it verifies existing behavior without changing code or docs.
+
+- Validation-only tasks may end with no commit.
+- Verify that no unexpected GitHub commit was created and that the previous code commit remains current.
+
 ## Git rules
 
 Allowed:

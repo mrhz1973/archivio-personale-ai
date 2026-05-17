@@ -48,7 +48,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0375..ARCH-0384 | Batch 23B — first-run validation safety and docs alignment | Closed — commit `1a91b3d` |
 | ARCH-0385..ARCH-0394 | Batch 23C — validation runner help and full-only clarity | Closed — commit `77a10bf` |
 | ARCH-0395..ARCH-0404 | Batch 24A — inventory read-only safety and CLI clarity | Closed — commit `6cedf2b` |
-| ARCH-0405..ARCH-0429 | Batch 24B — inventory JSON metadata and deterministic output | Closed — commit pending |
+| ARCH-0405..ARCH-0429 | Batch 24B — inventory JSON metadata and deterministic output | Closed — commit `c1a3f45` |
 
 ## Current phase
 

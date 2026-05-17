@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+reports/inventory*.json
+reports/inventory*.html
+.env

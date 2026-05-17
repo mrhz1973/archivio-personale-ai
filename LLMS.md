@@ -28,6 +28,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0055..ARCH-0064 | Batch 6 — auto-push policy and report validation tooling | Closed — commit `429592e` |
 | ARCH-0065..ARCH-0074 | Batch 7 — harden report validator | Closed — commit `63ad275` |
 | ARCH-0075..ARCH-0084 | Batch 8 — tracking cleanup and validator integration | Closed — commit `2c087ee` |
+| ARCH-0085..ARCH-0094 | Batch 9 — validator CLI polish and tracking fix | Closed — commit pending |
 
 ## Current phase
 

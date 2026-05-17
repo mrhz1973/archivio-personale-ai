@@ -7,6 +7,7 @@ Usage:
     python scripts/validate_reports.py report.html           # explicit file(s)
     python scripts/validate_reports.py reports/              # all *.html in directory (recursive)
     python scripts/validate_reports.py reports/ extra.html   # mix
+    python scripts/validate_reports.py --help                # show this help
 
 Exit codes:
     0 — no errors
@@ -17,6 +18,19 @@ Exit codes:
 import os
 import re
 import sys
+
+_HELP = """\
+Usage: python scripts/validate_reports.py [PATH ...] [--help]
+
+  (no args)          Check default reports (inventory, classification, action plan).
+  PATH               One or more .html files or directories (recursive).
+  -h, --help         Show this message and exit.
+
+Exit codes:
+  0  no errors
+  1  one or more validation errors
+  2  invalid CLI usage or explicit path not found
+"""
 
 DEFAULT_PATHS = [
     "reports/inventory_report.html",
@@ -131,6 +145,7 @@ def _collect_paths(argv):
         elif os.path.isdir(arg):
             found = []
             for dirpath, _dirs, filenames in os.walk(arg):
+                _dirs.sort()
                 for fn in sorted(filenames):
                     if fn.lower().endswith(".html"):
                         found.append((os.path.join(dirpath, fn), True))
@@ -147,6 +162,10 @@ def _collect_paths(argv):
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
+
+    if "-h" in argv or "--help" in argv:
+        print(_HELP, end="")
+        return 0
 
     entries, empty_dirs, err = _collect_paths(argv)
     if err:

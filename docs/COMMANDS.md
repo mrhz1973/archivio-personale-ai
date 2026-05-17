@@ -85,14 +85,17 @@ Exit codes: `0` no errors, `1` validation errors, `2` invalid path or CLI usage.
 # default: check reports/inventory_report.html, classification_report.html, action_plan_report.html
 python .\scripts\validate_reports.py
 
-# all *.html in a directory (recursive)
+# all *.html in a directory (recursive, deterministic order)
 python .\scripts\validate_reports.py .\reports
 
 # explicit file
 python .\scripts\validate_reports.py .\reports\inventory_report.html
+
+# show help and exit codes
+python .\scripts\validate_reports.py --help
 ```
 
-Missing default report files are skipped with `[SKIP]`. Results per file: `[OK]`, `[WARN]`, `[FAIL]`.
+Missing default report files are skipped with `[SKIP]`. Directories with no HTML print `[INFO]`. Results per file: `[OK]`, `[WARN]`, `[FAIL]`.
 
 ## Troubleshooting: blank duplicate table in action report
 

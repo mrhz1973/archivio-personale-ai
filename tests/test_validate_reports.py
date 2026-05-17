@@ -306,6 +306,51 @@ class TestMain(TmpMixin, unittest.TestCase):
         self.assertEqual(status, "FAIL")
         self.assertTrue(any("dangerous" in m for m in messages))
 
+    def test_help_flag_returns_0(self):
+        # ARCH-0090: --help exits 0 without validating any files
+        code = main(["--help"])
+        self.assertEqual(code, 0)
+
+    def test_help_short_flag_returns_0(self):
+        # ARCH-0090: -h exits 0
+        code = main(["-h"])
+        self.assertEqual(code, 0)
+
+    def test_help_output_contains_usage(self):
+        # ARCH-0090: --help output contains Usage and exit code info
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            main(["--help"])
+        output = buf.getvalue()
+        self.assertIn("Usage", output)
+        self.assertIn("Exit codes", output)
+
+    def test_directory_recursive_deterministic_order(self):
+        # ARCH-0091: repeated calls on the same directory produce identical order
+        import io
+        from contextlib import redirect_stdout
+        d = self._make_tmpdir()
+        subdir = os.path.join(d, "b_sub")
+        os.makedirs(subdir)
+        for name in ("z_report.html", "a_report.html", os.path.join("b_sub", "m_report.html")):
+            p = os.path.join(d, name)
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(VALID_ITALIAN)
+
+        def _collect():
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                main([d])
+            return [ln.split(None, 1)[1].strip()
+                    for ln in buf.getvalue().splitlines() if ln.startswith("[OK]")]
+
+        first = _collect()
+        second = _collect()
+        self.assertEqual(first, second)
+        self.assertEqual(len(first), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

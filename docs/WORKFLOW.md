@@ -48,13 +48,17 @@ Open `reports/classification_report.html` in a browser and review the categories
 
 ## Future phases (not yet implemented)
 
-### AI/cloud classification
+### Future local AI classification
 
-A future AI model may improve classification quality, but personal file contents must not be uploaded to cloud/API services without explicit approval.
+A future local AI model (e.g. Ollama, LM Studio, llama.cpp) may improve classification quality by reasoning from metadata summaries. Personal file contents must never be sent to cloud or external API services. ChatGPT web may reason only from user-approved summaries, reports, or logs — not from raw private file uploads unless explicitly approved by the user.
 
-### Proposed moves
+### proposed_actions.json vs proposed_moves.json
 
-A future `proposed_moves.json` may describe suggested moves for manual review. It must not execute moves. Existing project/context folders must remain protected unless the user explicitly overrides that rule.
+**Current phase:** `reports/proposed_actions.json` is review-only. It may include duplicate groups, root sort candidates, review priority, and theoretical potential reclaimable size. It does not execute anything.
+
+**Future controlled move phase (not yet implemented):** `proposed_moves.json` may exist only if the user explicitly approves a real move phase. It must be manually reviewed, require batch approval and a rollback plan, and must never be triggered automatically.
+
+### Proposed moves (future)
 
 ### Optional controlled move
 

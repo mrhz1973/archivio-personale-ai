@@ -34,6 +34,22 @@ python -m unittest discover
 
 Tests use synthetic data and temporary directories only. Do not reference `reports/` or personal files inside tests.
 
+## Local validation runner
+
+Run all project validations in one command (stdlib only, no network, no report opening):
+
+```powershell
+python .\scripts\run_validations.py
+```
+
+Quick mode — skips unittest, runs only py_compile and validate_reports --help:
+
+```powershell
+python .\scripts\run_validations.py --quick
+```
+
+Exit codes: `0` all checks passed, `1` one or more checks failed.
+
 ## Inventory example
 
 ```powershell

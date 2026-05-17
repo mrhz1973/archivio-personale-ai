@@ -25,6 +25,7 @@ def build_html(data: dict) -> str:
     summary = data.get("summary", {})
     root_sort_candidates = data.get("root_sort_candidates", [])
     duplicate_groups = data.get("duplicate_groups", [])
+    priority_counts = summary.get("duplicate_priority_counts", {})
 
     source = html.escape(str(summary.get("source", "")))
     total_files = int(summary.get("total_files", 0) or 0)
@@ -32,6 +33,7 @@ def build_html(data: dict) -> str:
     duplicate_groups_count = int(summary.get("duplicate_groups_count", 0) or 0)
     duplicate_files_count = int(summary.get("duplicate_files_count", 0) or 0)
     keep_in_place_count = int(summary.get("keep_in_place_count", 0) or 0)
+    potential_reclaimable = int(summary.get("potential_reclaimable_bytes", 0) or 0)
 
     sort_rows = ""
     for item in root_sort_candidates[:200]:
@@ -45,17 +47,29 @@ def build_html(data: dict) -> str:
             "</tr>\n"
         )
 
+    priority_rows = ""
+    for priority, count in priority_counts.items():
+        priority_rows += (
+            "<tr>"
+            f"<td>{html.escape(str(priority))}</td>"
+            f"<td>{int(count)}</td>"
+            "</tr>\n"
+        )
+
     duplicate_rows = ""
     for group in duplicate_groups[:100]:
         files_html = "<ul>" + "".join(
             f"<li>{html.escape(str(file.get('relative_path', '')))} "
+            f"[{html.escape(str(file.get('top_level_folder', '')))}] "
             f"({html.escape(str(file.get('location_policy', '')))}, {fmt_size(int(file.get('size_bytes', 0) or 0))})</li>"
             for file in group.get("files", [])
         ) + "</ul>"
         duplicate_rows += (
             "<tr>"
             f"<td>{html.escape(str(group.get('sha256', ''))[:16])}…</td>"
+            f"<td>{html.escape(str(group.get('review_priority', '')))}</td>"
             f"<td>{int(group.get('count', 0) or 0)}</td>"
+            f"<td>{fmt_size(int(group.get('potential_reclaimable_bytes', 0) or 0))}</td>"
             f"<td>{fmt_size(int(group.get('total_size_bytes', 0) or 0))}</td>"
             f"<td>{files_html}</td>"
             f"<td>{html.escape(str(group.get('status', '')))}</td>"
@@ -75,12 +89,24 @@ def build_html(data: dict) -> str:
         else "<h2>Root Sort Candidates</h2><p>No root-level sortable candidates found.</p>"
     )
 
+    priority_section = (
+        f"""
+        <h2>Duplicate Review Priority Counts</h2>
+        <table>
+          <thead><tr><th>Priority</th><th>Groups</th></tr></thead>
+          <tbody>{priority_rows}</tbody>
+        </table>
+        """
+        if priority_rows
+        else ""
+    )
+
     duplicate_section = (
         f"""
-        <h2>Exact Duplicate Groups (first 100)</h2>
-        <p>Exact duplicate candidates are based on identical SHA-256 hashes. Review manually; no deletion is proposed.</p>
+        <h2>Exact Duplicate Groups (first 100, sorted by potential reclaimable size)</h2>
+        <p>Exact duplicate candidates are based on identical SHA-256 hashes. Potential reclaimable size is theoretical and assumes keeping one copy; it is not a delete instruction.</p>
         <table>
-          <thead><tr><th>SHA-256</th><th>Count</th><th>Total Size</th><th>Files</th><th>Status</th></tr></thead>
+          <thead><tr><th>SHA-256</th><th>Review Priority</th><th>Count</th><th>Potential Reclaimable</th><th>Total Size</th><th>Files</th><th>Status</th></tr></thead>
           <tbody>{duplicate_rows}</tbody>
         </table>
         """
@@ -118,9 +144,11 @@ def build_html(data: dict) -> str:
     <div class="stat">Root candidates<span>{root_sort_count}</span></div>
     <div class="stat">Duplicate groups<span>{duplicate_groups_count}</span></div>
     <div class="stat">Duplicate files<span>{duplicate_files_count}</span></div>
+    <div class="stat">Potential reclaimable<span>{fmt_size(potential_reclaimable)}</span></div>
   </div>
 
   {sort_section}
+  {priority_section}
   {duplicate_section}
 </body>
 </html>

@@ -25,7 +25,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0024..ARCH-0033 | Batch 3 — operational guardrails | Closed — commit `23f59ae` |
 | ARCH-0034..ARCH-0044 | Batch 4 — action report rendering and orchestration rules | Closed — commit `1348ef1` |
 | ARCH-0045..ARCH-0054 | Batch 5 — tracking and report verification hardening | Closed — commit `4287ff1` |
-| ARCH-0055..ARCH-0064 | Batch 6 — auto-push policy and report validation tooling | Closed — commit pending |
+| ARCH-0055..ARCH-0064 | Batch 6 — auto-push policy and report validation tooling | Closed — commit `429592e` |
 
 ## Current phase
 

@@ -19,36 +19,14 @@ from scripts.classify_inventory import main as _cls_main
 from scripts.generate_inventory_report import main as _inv_report_main
 from scripts.generate_classification_report import main as _cls_report_main
 from scripts.generate_action_plan_report import main as _ap_report_main
-from tests.helpers import TmpDirMixin
+from tests.helpers import TmpDirMixin, SYNTHETIC_INVENTORY, SYNTHETIC_CLASSIFICATION, SYNTHETIC_ACTION_PLAN
 
 _REPO_ROOT = Path(__file__).parent.parent
 _REPORTS_DIR = _REPO_ROOT / "reports"
 
-_SYNTHETIC_INVENTORY = {
-    "summary": {"source": "C:/Synthetic", "total_files": 1, "total_size_bytes": 100,
-                "extensions_count": {".pdf": 1}, "skipped_count": 0, "errors_count": 0},
-    "files": [{"relative_path": "doc.pdf", "filename": "doc.pdf", "extension": ".pdf",
-               "size_bytes": 100, "modified_time_iso": "2025-01-01T00:00:00", "sha256": "aaa"}],
-    "errors": [],
-}
-
-_SYNTHETIC_CLASSIFICATION = {
-    "summary": {"source": "C:/Synthetic", "total_files": 1, "low_confidence_count": 0,
-                "categories_count": {"Documents": 1}, "location_policy_counts": {"classify_only": 1}},
-    "classifications": [{"relative_path": "doc.pdf", "category": "Documents",
-                         "location_policy": "classify_only", "confidence": 0.90,
-                         "signals": ["ext:.pdf"], "suggested_folder": "Documents", "size_bytes": 100}],
-}
-
-_SYNTHETIC_ACTION_PLAN = {
-    "summary": {"source": "C:/Synthetic", "total_files": 1, "root_sort_candidates_count": 1,
-                "duplicate_groups_count": 0, "duplicate_files_count": 0, "keep_in_place_count": 0,
-                "potential_reclaimable_bytes": 0, "duplicate_priority_counts": {}},
-    "root_sort_candidates": [{"relative_path": "orphan.pdf", "category": "Documents",
-                              "confidence": 0.85, "proposed_destination_relative_path": "Documenti/orphan.pdf",
-                              "status": "review_only"}],
-    "duplicate_groups": [],
-}
+_SYNTHETIC_INVENTORY = SYNTHETIC_INVENTORY
+_SYNTHETIC_CLASSIFICATION = SYNTHETIC_CLASSIFICATION
+_SYNTHETIC_ACTION_PLAN = SYNTHETIC_ACTION_PLAN
 
 
 def _call(main_fn, argv):

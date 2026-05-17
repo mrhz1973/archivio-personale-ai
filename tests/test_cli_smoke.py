@@ -19,7 +19,7 @@ from scripts.classify_inventory import main as _cls_main
 from scripts.generate_inventory_report import main as _inv_report_main
 from scripts.generate_classification_report import main as _cls_report_main
 from scripts.generate_action_plan_report import main as _ap_report_main
-from tests.helpers import TmpDirMixin
+from tests.helpers import TmpDirMixin, SYNTHETIC_INVENTORY, SYNTHETIC_CLASSIFICATION, SYNTHETIC_ACTION_PLAN
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -79,24 +79,12 @@ class TestInventoryReadonlyCLI(TmpDirMixin):
 
 # ── ARCH-0108: classify_inventory CLI smoke ───────────────────────────────────
 
-_SYNTHETIC_INVENTORY = {
-    "summary": {"source": "C:/Synthetic", "total_files": 2, "total_size_bytes": 200,
-                "extensions_count": {".pdf": 1, ".jpg": 1}, "skipped_count": 0, "errors_count": 0},
-    "files": [
-        {"relative_path": "doc.pdf", "filename": "doc.pdf", "extension": ".pdf", "size_bytes": 100,
-         "modified_time_iso": "2025-01-01T00:00:00", "sha256": "aaa"},
-        {"relative_path": "subfolder/photo.jpg", "filename": "photo.jpg", "extension": ".jpg",
-         "size_bytes": 100, "modified_time_iso": "2025-01-02T00:00:00", "sha256": "bbb"},
-    ],
-    "errors": [],
-}
-
 
 class TestClassifyInventoryCLI(TmpDirMixin):
     """Smoke test for classify_inventory.main() using synthetic inventory JSON."""
 
     def test_cli_produces_classifications_json(self):
-        inp = self._write_json(_SYNTHETIC_INVENTORY, "inventory.json")
+        inp = self._write_json(SYNTHETIC_INVENTORY, "inventory.json")
         out = self._path("classifications.json")
         _call(_cls_main, ["classify_inventory.py", "--input", inp, "--output", out])
         self.assertTrue(os.path.isfile(out))
@@ -107,7 +95,7 @@ class TestClassifyInventoryCLI(TmpDirMixin):
         self.assertEqual(len(data["classifications"]), 2)
 
     def test_cli_dry_run_only_flag(self):
-        inp = self._write_json(_SYNTHETIC_INVENTORY, "inventory.json")
+        inp = self._write_json(SYNTHETIC_INVENTORY, "inventory.json")
         out = self._path("classifications.json")
         _call(_cls_main, ["classify_inventory.py", "--input", inp, "--output", out])
         with open(out, encoding="utf-8") as f:
@@ -117,7 +105,7 @@ class TestClassifyInventoryCLI(TmpDirMixin):
             self.assertTrue(item["dry_run_only"])
 
     def test_cli_context_bound_preserved(self):
-        inp = self._write_json(_SYNTHETIC_INVENTORY, "inventory.json")
+        inp = self._write_json(SYNTHETIC_INVENTORY, "inventory.json")
         out = self._path("classifications.json")
         _call(_cls_main, ["classify_inventory.py", "--input", inp, "--output", out])
         with open(out, encoding="utf-8") as f:
@@ -135,18 +123,10 @@ class TestClassifyInventoryCLI(TmpDirMixin):
 
 # ── ARCH-0109: generate_inventory_report CLI smoke ────────────────────────────
 
-_SYNTHETIC_INV_REPORT = {
-    "summary": {"source": "C:/Synthetic", "total_files": 1, "total_size_bytes": 100,
-                "extensions_count": {".txt": 1}, "skipped_count": 0, "errors_count": 0},
-    "files": [{"relative_path": "a.txt", "filename": "a.txt", "extension": ".txt",
-               "size_bytes": 100, "modified_time_iso": "2025-01-01T00:00:00", "sha256": "ccc"}],
-    "errors": [],
-}
-
 
 class TestGenerateInventoryReportCLI(TmpDirMixin):
     def test_cli_produces_html(self):
-        inp = self._write_json(_SYNTHETIC_INV_REPORT, "inventory.json")
+        inp = self._write_json(SYNTHETIC_INVENTORY, "inventory.json")
         out = self._path("report.html")
         _call(_inv_report_main, ["generate_inventory_report.py", "--input", inp, "--output", out])
         self.assertTrue(os.path.isfile(out))
@@ -158,18 +138,10 @@ class TestGenerateInventoryReportCLI(TmpDirMixin):
 
 # ── ARCH-0110: generate_classification_report CLI smoke ───────────────────────
 
-_SYNTHETIC_CLS_REPORT = {
-    "summary": {"source": "C:/Synthetic", "total_files": 1, "low_confidence_count": 0,
-                "categories_count": {"Documents": 1}, "location_policy_counts": {"classify_only": 1}},
-    "classifications": [{"relative_path": "a.pdf", "category": "Documents", "location_policy": "classify_only",
-                         "confidence": 0.90, "signals": ["extension:.pdf"], "suggested_folder": "Documents",
-                         "size_bytes": 100}],
-}
-
 
 class TestGenerateClassificationReportCLI(TmpDirMixin):
     def test_cli_produces_html(self):
-        inp = self._write_json(_SYNTHETIC_CLS_REPORT, "classifications.json")
+        inp = self._write_json(SYNTHETIC_CLASSIFICATION, "classifications.json")
         out = self._path("report.html")
         _call(_cls_report_main, ["generate_classification_report.py", "--input", inp, "--output", out])
         self.assertTrue(os.path.isfile(out))
@@ -181,21 +153,10 @@ class TestGenerateClassificationReportCLI(TmpDirMixin):
 
 # ── ARCH-0111: generate_action_plan_report CLI smoke ─────────────────────────
 
-_SYNTHETIC_AP_REPORT = {
-    "summary": {"source": "C:/Synthetic", "total_files": 2, "root_sort_candidates_count": 1,
-                "duplicate_groups_count": 0, "duplicate_files_count": 0, "keep_in_place_count": 1,
-                "potential_reclaimable_bytes": 0, "duplicate_priority_counts": {}},
-    "root_sort_candidates": [
-        {"relative_path": "orphan.txt", "category": "Text", "confidence": 0.75,
-         "proposed_destination_relative_path": "Testi/orphan.txt", "status": "review_only"}
-    ],
-    "duplicate_groups": [],
-}
-
 
 class TestGenerateActionPlanReportCLI(TmpDirMixin):
     def test_cli_produces_html(self):
-        inp = self._write_json(_SYNTHETIC_AP_REPORT, "proposed_actions.json")
+        inp = self._write_json(SYNTHETIC_ACTION_PLAN, "proposed_actions.json")
         out = self._path("report.html")
         _call(_ap_report_main, ["generate_action_plan_report.py", "--input", inp, "--output", out])
         self.assertTrue(os.path.isfile(out))

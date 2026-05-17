@@ -7,9 +7,7 @@ No personal files, no reports/ directory, no real archive data.
 
 import json
 import os
-import shutil
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -21,6 +19,7 @@ from scripts.generate_inventory_report import main as _inventory_main
 from scripts.generate_classification_report import main as _classification_main
 from scripts.generate_action_plan_report import main as _action_plan_main
 import scripts.validate_reports as vr
+from tests.helpers import TmpDirMixin
 
 
 def inventory_main(args):
@@ -153,25 +152,9 @@ SYNTHETIC_ACTION_PLAN = {
 
 # ── base test mixin ────────────────────────────────────────────────────────────
 
-class TmpDirMixin(unittest.TestCase):
-    def setUp(self):
-        self._tmpdir = tempfile.mkdtemp(prefix="archivio_test_")
-
-    def tearDown(self):
-        shutil.rmtree(self._tmpdir, ignore_errors=True)
-
-    def _write_json(self, data, name):
-        path = os.path.join(self._tmpdir, name)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False)
-        return path
-
-    def _out(self, name):
-        return os.path.join(self._tmpdir, name)
-
-    def _read_html(self, path):
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read()
+def _read_html(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
 
 # ── ARCH-0096: generate to temp dir ───────────────────────────────────────────
@@ -209,7 +192,7 @@ class TestInventoryReportContent(TmpDirMixin):
         src = self._write_json(SYNTHETIC_INVENTORY, "inventory.json")
         out = self._out("inventory_report.html")
         inventory_main(["--input", src, "--output", out])
-        self._html = self._read_html(out)
+        self._html = _read_html(out)
         self._path = out
 
     def test_lang_it_present(self):
@@ -242,7 +225,7 @@ class TestClassificationReportContent(TmpDirMixin):
         src = self._write_json(SYNTHETIC_CLASSIFICATION, "classifications.json")
         out = self._out("classification_report.html")
         classification_main(["--input", src, "--output", out])
-        self._html = self._read_html(out)
+        self._html = _read_html(out)
         self._path = out
 
     def test_lang_it_present(self):
@@ -275,7 +258,7 @@ class TestActionPlanReportContent(TmpDirMixin):
         src = self._write_json(SYNTHETIC_ACTION_PLAN, "proposed_actions.json")
         out = self._out("action_plan_report.html")
         action_plan_main(["--input", src, "--output", out])
-        self._html = self._read_html(out)
+        self._html = _read_html(out)
         self._path = out
 
     def test_lang_it_present(self):

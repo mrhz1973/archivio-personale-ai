@@ -7,9 +7,7 @@ No personal files, no reports/ directory, no real archive data.
 
 import json
 import os
-import shutil
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -21,6 +19,7 @@ from scripts.classify_inventory import main as _cls_main
 from scripts.generate_inventory_report import main as _inv_report_main
 from scripts.generate_classification_report import main as _cls_report_main
 from scripts.generate_action_plan_report import main as _ap_report_main
+from tests.helpers import TmpDirMixin
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -30,26 +29,9 @@ def _call(main_fn, argv):
         main_fn()
 
 
-class _TmpMixin(unittest.TestCase):
-    def setUp(self):
-        self._tmp = tempfile.mkdtemp(prefix="cli_smoke_")
-
-    def tearDown(self):
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    def _path(self, name):
-        return os.path.join(self._tmp, name)
-
-    def _write_json(self, data, name):
-        p = self._path(name)
-        with open(p, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False)
-        return p
-
-
 # ── ARCH-0107: inventory_readonly CLI smoke ────────────────────────────────────
 
-class TestInventoryReadonlyCLI(_TmpMixin):
+class TestInventoryReadonlyCLI(TmpDirMixin):
     """Smoke test for inventory_readonly.main() using a synthetic source dir."""
 
     def _make_source(self):
@@ -110,7 +92,7 @@ _SYNTHETIC_INVENTORY = {
 }
 
 
-class TestClassifyInventoryCLI(_TmpMixin):
+class TestClassifyInventoryCLI(TmpDirMixin):
     """Smoke test for classify_inventory.main() using synthetic inventory JSON."""
 
     def test_cli_produces_classifications_json(self):
@@ -162,7 +144,7 @@ _SYNTHETIC_INV_REPORT = {
 }
 
 
-class TestGenerateInventoryReportCLI(_TmpMixin):
+class TestGenerateInventoryReportCLI(TmpDirMixin):
     def test_cli_produces_html(self):
         inp = self._write_json(_SYNTHETIC_INV_REPORT, "inventory.json")
         out = self._path("report.html")
@@ -185,7 +167,7 @@ _SYNTHETIC_CLS_REPORT = {
 }
 
 
-class TestGenerateClassificationReportCLI(_TmpMixin):
+class TestGenerateClassificationReportCLI(TmpDirMixin):
     def test_cli_produces_html(self):
         inp = self._write_json(_SYNTHETIC_CLS_REPORT, "classifications.json")
         out = self._path("report.html")
@@ -211,7 +193,7 @@ _SYNTHETIC_AP_REPORT = {
 }
 
 
-class TestGenerateActionPlanReportCLI(_TmpMixin):
+class TestGenerateActionPlanReportCLI(TmpDirMixin):
     def test_cli_produces_html(self):
         inp = self._write_json(_SYNTHETIC_AP_REPORT, "proposed_actions.json")
         out = self._path("report.html")

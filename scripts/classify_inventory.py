@@ -4,12 +4,18 @@ Rule-based dry-run classifier for inventory JSON files.
 This script reads metadata produced by inventory_readonly.py and writes
 classification suggestions. It never reads source file contents and never
 moves, renames, deletes, overwrites, or reorganizes files.
+
+Context preservation rule:
+files that are already inside a subfolder are treated as context-bound and
+default to keep_in_place. This prevents a PDF, spreadsheet, image, or other
+file that belongs to a project folder from being suggested for relocation just
+because of its extension.
 """
 
 import argparse
 import json
 import sys
-from pathlib import Path
+from pathlib import PurePosixPath, Path
 from typing import Any
 
 
@@ -104,6 +110,24 @@ def normalize_text(value: str) -> str:
     return value.replace("\\", "/").lower()
 
 
+def normalized_relative_path(relative_path: str) -> str:
+    return relative_path.replace("\\", "/")
+
+
+def is_context_bound(relative_path: str) -> bool:
+    """Return True when the file is already inside a subfolder.
+
+    Files already stored inside a folder likely belong to that folder's context,
+    such as a project folder that contains PDFs, spreadsheets, images, notes,
+    and other supporting files. The classifier must preserve that context.
+    """
+
+    normalized = normalized_relative_path(relative_path).strip("/")
+    if not normalized:
+        return False
+    return PurePosixPath(normalized).parent != PurePosixPath(".")
+
+
 def classify_file(file_info: dict[str, Any]) -> dict[str, Any]:
     relative_path = str(file_info.get("relative_path", ""))
     filename = str(file_info.get("filename", ""))
@@ -139,6 +163,16 @@ def classify_file(file_info: dict[str, Any]) -> dict[str, Any]:
         else:
             signals.append("no_extension")
 
+    context_bound = is_context_bound(relative_path)
+    if context_bound:
+        location_policy = "keep_in_place"
+        suggested_folder = None
+        signals.append("context:inside_existing_folder")
+    else:
+        location_policy = "classify_only"
+        suggested_folder = category
+        signals.append("context:root_file")
+
     return {
         "relative_path": relative_path,
         "filename": filename,
@@ -147,7 +181,9 @@ def classify_file(file_info: dict[str, Any]) -> dict[str, Any]:
         "category": category,
         "confidence": round(confidence, 2),
         "signals": signals,
-        "suggested_folder": category,
+        "location_policy": location_policy,
+        "context_bound": context_bound,
+        "suggested_folder": suggested_folder,
         "dry_run_only": True,
     }
 
@@ -157,6 +193,14 @@ def build_category_counts(classifications: list[dict[str, Any]]) -> dict[str, in
     for item in classifications:
         category = str(item.get("category", "Misc"))
         counts[category] = counts.get(category, 0) + 1
+    return dict(sorted(counts.items(), key=lambda x: x[1], reverse=True))
+
+
+def build_location_policy_counts(classifications: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in classifications:
+        policy = str(item.get("location_policy", "classify_only"))
+        counts[policy] = counts.get(policy, 0) + 1
     return dict(sorted(counts.items(), key=lambda x: x[1], reverse=True))
 
 
@@ -172,6 +216,7 @@ def classify_inventory(data: dict[str, Any]) -> dict[str, Any]:
         "source": data.get("summary", {}).get("source", ""),
         "total_files": len(classifications),
         "categories_count": build_category_counts(classifications),
+        "location_policy_counts": build_location_policy_counts(classifications),
         "low_confidence_count": len(low_confidence),
         "dry_run_only": True,
     }
@@ -209,8 +254,9 @@ def main() -> None:
 
     total = result["summary"]["total_files"]
     low = result["summary"]["low_confidence_count"]
+    keep = result["summary"]["location_policy_counts"].get("keep_in_place", 0)
     print(f"Classifications written to: {output_path}")
-    print(f"Files classified: {total}, low confidence: {low}")
+    print(f"Files classified: {total}, keep in place: {keep}, low confidence: {low}")
 
 
 if __name__ == "__main__":

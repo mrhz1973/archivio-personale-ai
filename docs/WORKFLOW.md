@@ -1,30 +1,22 @@
 # Workflow — Archivio Personale AI
 
-This document describes the intended pipeline from initial safe inventory to an eventual optional controlled move phase.
+This document describes the safe pipeline from read-only inventory to dry-run classification and, only in a future explicitly approved phase, controlled moves.
 
 ---
 
 ## Step 1 — Create an external test folder
 
-Create a folder **outside** the repository (e.g. `D:\Archivio_Test`) with a small set of fake or disposable files. Never use the real archive for first tests.
+Create a folder **outside** the repository, for example `C:\Archivio_Test`, with fake files or disposable copies.
 
 ## Step 2 — Run the read-only inventory scan
 
 ```bash
-python scripts/inventory_readonly.py --source "D:\Archivio_Test" --output reports/inventory.json
+python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output reports/inventory.json
 ```
 
 The script recursively scans the source folder in read-only mode and writes a JSON file to the output path. The source folder is never modified.
 
-## Step 3 — Review the JSON inventory
-
-Open `reports/inventory.json` and check:
-- total file count
-- total size
-- extension distribution
-- any errors or skipped files
-
-## Step 4 — Generate a static HTML report
+## Step 3 — Generate the inventory HTML report
 
 ```bash
 python scripts/generate_inventory_report.py --input reports/inventory.json --output reports/inventory_report.html
@@ -32,22 +24,34 @@ python scripts/generate_inventory_report.py --input reports/inventory.json --out
 
 Open `reports/inventory_report.html` in a browser for a human-readable summary.
 
+## Step 4 — Run dry-run rule-based classification
+
+```bash
+python scripts/classify_inventory.py --input reports/inventory.json --output reports/classifications.json
+```
+
+This step reads only `inventory.json`. It classifies files from metadata such as relative path, filename, extension, and size. It does not read source file contents and does not move, rename, delete, overwrite, or reorganize files.
+
+## Step 5 — Generate the classification HTML report
+
+```bash
+python scripts/generate_classification_report.py --input reports/classifications.json --output reports/classification_report.html
+```
+
+Open `reports/classification_report.html` in a browser and review the categories and low-confidence items.
+
 ---
 
 ## Future phases (not yet implemented)
 
-### Phase 2 — AI classification
+### AI/cloud classification
 
-An AI model will analyze file names, paths, and metadata from the inventory and suggest a classification (e.g. suggested folder, category, tags). Output: a `classifications.json` file. No files are moved.
+A future AI model may improve classification quality, but personal file contents must not be uploaded to cloud/API services without explicit approval.
 
-### Phase 3 — Proposed moves
+### Proposed moves
 
-Based on AI classification, the system will generate a `proposed_moves.json` describing suggested moves. The user reviews this file manually before any action is taken.
+A future `proposed_moves.json` may describe suggested moves for manual review. It must not execute moves.
 
-### Phase 4 — Optional controlled move (explicit approval required)
+### Optional controlled move
 
-Only after:
-- the user has reviewed and approved the proposed moves,
-- a rollback plan is in place,
-
-will a controlled move script be executed. Each batch must be explicitly approved. This phase is opt-in and never automatic.
+Only after explicit user approval and a rollback plan may a controlled move phase be considered. Each batch must be explicitly approved. This phase is opt-in and never automatic.

@@ -20,6 +20,19 @@ The source archive must stay outside the repo (for example `C:\Archivio_Test`).
 - Before implementer switch: verify workspace clean/aligned.
 - Local user environment is Windows: use PowerShell for local commands.
 
+## First-run readiness check
+
+Before running any other commands, verify that your environment meets minimal requirements:
+
+```powershell
+python .\scripts\run_first_time_check.py
+```
+
+This checks:
+- Python version >= 3.8
+- Expected scripts exist
+- Expected docs exist
+
 ## v1 quickstart
 
 Fastest path to verify the project on synthetic data (no personal files):

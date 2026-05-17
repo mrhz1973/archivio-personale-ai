@@ -19,6 +19,21 @@ Manual preflight checks (compact):
 - confirm only authorized files/areas are in scope;
 - declare whether real gates exist (move/rename/delete, API/cloud, n8n, MCP, installs, secrets).
 
+## First-run readiness check
+
+Before running other commands, verify environment readiness:
+
+```powershell
+python .\scripts\run_first_time_check.py
+```
+
+Checks:
+- Python >= 3.8
+- Expected scripts exist: `run_validations.py`, `run_synthetic_demo.py`
+- Expected docs exist: `docs/COMMANDS.md`, `README.md`
+
+Exit codes: `0` all checks passed, `1` one or more checks failed.
+
 ## Validation
 
 ```powershell

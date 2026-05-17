@@ -41,6 +41,8 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0225..ARCH-0259 | Batch 19 — synthetic demo polish and full validation integration | Closed — commit `812da45` |
 | ARCH-0260..ARCH-0294 | Batch 20 — synthetic demo manifest and user-facing quickstart | Closed — commit `2763017` |
 | ARCH-0295..ARCH-0334 | Batch 21 — v1 quickstart and validation summaries | Closed — commit `49ac2d8` |
+| ARCH-0335..ARCH-0344 | Batch 22A — first-run readiness check | Closed — commit `37cf1a7` |
+| ARCH-0345..ARCH-0354 | Batch 22B — first-run check tests and docs | Closed — commit pending |
 
 ## Current phase
 

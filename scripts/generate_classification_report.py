@@ -25,15 +25,25 @@ def build_html(data: dict) -> str:
     summary = data.get("summary", {})
     classifications = data.get("classifications", [])
     category_counts = summary.get("categories_count", {})
+    policy_counts = summary.get("location_policy_counts", {})
 
     source = html.escape(str(summary.get("source", "")))
     total_files = int(summary.get("total_files", 0) or 0)
     low_confidence_count = int(summary.get("low_confidence_count", 0) or 0)
+    keep_in_place_count = int(policy_counts.get("keep_in_place", 0) or 0)
+    classify_only_count = int(policy_counts.get("classify_only", 0) or 0)
 
     category_rows = ""
     for category, count in category_counts.items():
         category_rows += (
             f"<tr><td>{html.escape(str(category))}</td>"
+            f"<td>{int(count)}</td></tr>\n"
+        )
+
+    policy_rows = ""
+    for policy, count in policy_counts.items():
+        policy_rows += (
+            f"<tr><td>{html.escape(str(policy))}</td>"
             f"<td>{int(count)}</td></tr>\n"
         )
 
@@ -48,6 +58,7 @@ def build_html(data: dict) -> str:
             "<tr>"
             f"<td>{html.escape(str(item.get('relative_path', '')))}</td>"
             f"<td>{html.escape(str(item.get('category', '')))}</td>"
+            f"<td>{html.escape(str(item.get('location_policy', '')))}</td>"
             f"<td>{float(item.get('confidence', 0) or 0):.2f}</td>"
             f"<td>{html.escape(', '.join(item.get('signals', [])))}</td>"
             "</tr>\n"
@@ -55,10 +66,15 @@ def build_html(data: dict) -> str:
 
     sample_rows = ""
     for item in classifications[:100]:
+        suggested_folder = item.get("suggested_folder")
+        if suggested_folder is None:
+            suggested_folder = "(keep current folder)"
         sample_rows += (
             "<tr>"
             f"<td>{html.escape(str(item.get('relative_path', '')))}</td>"
             f"<td>{html.escape(str(item.get('category', '')))}</td>"
+            f"<td>{html.escape(str(item.get('location_policy', '')))}</td>"
+            f"<td>{html.escape(str(suggested_folder))}</td>"
             f"<td>{float(item.get('confidence', 0) or 0):.2f}</td>"
             f"<td>{fmt_size(int(item.get('size_bytes', 0) or 0))}</td>"
             f"<td>{html.escape(', '.join(item.get('signals', [])))}</td>"
@@ -70,7 +86,7 @@ def build_html(data: dict) -> str:
         low_section = f"""
         <h2>Low Confidence Items (first 50)</h2>
         <table>
-          <thead><tr><th>Path</th><th>Category</th><th>Confidence</th><th>Signals</th></tr></thead>
+          <thead><tr><th>Path</th><th>Category</th><th>Location Policy</th><th>Confidence</th><th>Signals</th></tr></thead>
           <tbody>{low_rows}</tbody>
         </table>
         """
@@ -96,13 +112,21 @@ def build_html(data: dict) -> str:
 <body>
   <h1>Archivio Personale AI — Classification Report</h1>
   <p><strong>Source:</strong> {source}</p>
-  <p class="warning"><strong>Dry-run only:</strong> this report contains suggestions only. No files were moved, renamed, deleted, overwritten, or reorganized.</p>
+  <p class="warning"><strong>Dry-run only:</strong> this report contains suggestions only. No files were moved, renamed, deleted, overwritten, or reorganized. Files already inside existing folders are marked <strong>keep_in_place</strong> to preserve project/context folders.</p>
 
   <h2>Summary</h2>
   <div>
     <div class="stat">Total files<span>{total_files}</span></div>
+    <div class="stat">Keep in place<span>{keep_in_place_count}</span></div>
+    <div class="stat">Root classify only<span>{classify_only_count}</span></div>
     <div class="stat">Low confidence<span>{low_confidence_count}</span></div>
   </div>
+
+  <h2>Location Policies</h2>
+  <table>
+    <thead><tr><th>Policy</th><th>Count</th></tr></thead>
+    <tbody>{policy_rows}</tbody>
+  </table>
 
   <h2>Categories</h2>
   <table>
@@ -114,7 +138,7 @@ def build_html(data: dict) -> str:
 
   <h2>Sample Classifications (first 100)</h2>
   <table>
-    <thead><tr><th>Path</th><th>Category</th><th>Confidence</th><th>Size</th><th>Signals</th></tr></thead>
+    <thead><tr><th>Path</th><th>Category</th><th>Location Policy</th><th>Suggested Folder</th><th>Confidence</th><th>Size</th><th>Signals</th></tr></thead>
     <tbody>{sample_rows}</tbody>
   </table>
 </body>

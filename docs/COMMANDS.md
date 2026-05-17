@@ -32,7 +32,13 @@ Checks:
 - Expected scripts exist: `run_validations.py`, `run_synthetic_demo.py`
 - Expected docs exist: `docs/COMMANDS.md`, `README.md`
 
-Exit codes: `0` all checks passed, `1` one or more checks failed.
+| Mode | Command | What it does |
+|------|---------|--------------|
+| full | `python .\scripts\run_first_time_check.py` | runs all checks; exit 0 if all pass, 1 if any fail |
+| list | `python .\scripts\run_first_time_check.py --list` | prints check labels without running; always exits 0 |
+| quiet | `python .\scripts\run_first_time_check.py --quiet` | suppresses [OK] lines; keeps [FAIL] and summary |
+
+Exit codes: `0` all checks passed (or `--list`), `1` one or more checks failed.
 
 ## Validation
 

@@ -8,10 +8,11 @@ Verifies:
   - Expected docs exist: docs/COMMANDS.md, README.md
 
 Exit codes:
-  0   all checks passed
+  0   all checks passed (or --list)
   1   one or more checks failed
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -54,13 +55,34 @@ _CHECKS = [
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="First-run readiness check. Verifies Python version, required scripts, and docs."
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List planned checks without running them; exit 0"
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress [OK] lines; keep [FAIL] and summary"
+    )
+    args = parser.parse_args()
+
+    if args.list:
+        for label, _ in _CHECKS:
+            print(label)
+        return 0
+
     ok_count = 0
     failures = []
 
     for label, check_fn in _CHECKS:
         result = check_fn()
         if result is True:
-            print(f"[OK]   {label}")
+            if not args.quiet:
+                print(f"[OK]   {label}")
             ok_count += 1
         else:
             error_msg = result if isinstance(result, str) else "check failed"

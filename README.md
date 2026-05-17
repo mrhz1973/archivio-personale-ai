@@ -33,6 +33,12 @@ This checks:
 - Expected scripts exist
 - Expected docs exist
 
+List planned checks without running them:
+
+```powershell
+python .\scripts\run_first_time_check.py --list
+```
+
 ## v1 quickstart
 
 Fastest path to verify the project on synthetic data (no personal files):

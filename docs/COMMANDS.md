@@ -2,62 +2,92 @@
 
 This file lists safe commands for the current phase. The source archive must remain read-only.
 
+## Local shell policy (Windows)
+
+For user-local execution, use **PowerShell** syntax and examples.
+Do not mix Bash syntax with PowerShell-only constructs.
+
+## Implementer preflight (before any edit)
+
+```powershell
+git branch --show-current
+git log -1 --oneline
+git status --short
+```
+
+Manual preflight checks (compact):
+- confirm only authorized files/areas are in scope;
+- declare whether real gates exist (move/rename/delete, API/cloud, n8n, MCP, installs, secrets).
+
 ## Validation
 
-```bash
+```powershell
 python -m py_compile scripts/inventory_readonly.py scripts/generate_inventory_report.py scripts/classify_inventory.py scripts/generate_classification_report.py scripts/generate_action_plan.py scripts/generate_action_plan_report.py
 python -m unittest discover -s tests -v
 ```
 
 ## Inventory example
 
-```bash
+```powershell
 python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output reports/inventory.json
 ```
 
 ## Inventory HTML report example
 
-```bash
+```powershell
 python scripts/generate_inventory_report.py --input reports/inventory.json --output reports/inventory_report.html
 ```
 
 ## Dry-run classification example
 
-```bash
+```powershell
 python scripts/classify_inventory.py --input reports/inventory.json --output reports/classifications.json
 ```
 
 ## Classification HTML report example
 
-```bash
+```powershell
 python scripts/generate_classification_report.py --input reports/classifications.json --output reports/classification_report.html
 ```
 
 ## Review-only action plan example
 
-```bash
+```powershell
 python scripts/generate_action_plan.py --inventory reports/inventory.json --classifications reports/classifications.json --output reports/proposed_actions.json
 ```
 
 ## Action plan HTML report example
 
-```bash
+```powershell
 python scripts/generate_action_plan_report.py --input reports/proposed_actions.json --output reports/action_plan_report.html
 ```
 
-## Open generated HTML reports on Windows
+## Open generated HTML reports on Windows (only on explicit user request)
 
 I report HTML generati sono in italiano.
 
-Use `.\reports\...` to avoid malformed paths such as `reportsaction_plan_report.html`.
+Use `./reports/...` to avoid malformed paths.
 
 ```powershell
-Invoke-Item .\reports\inventory_report.html
-Invoke-Item .\reports\classification_report.html
-Invoke-Item .\reports\action_plan_report.html
+Invoke-Item ./reports/inventory_report.html
+Invoke-Item ./reports/classification_report.html
+Invoke-Item ./reports/action_plan_report.html
 ```
 
-Non auto-aprire i report durante la validazione. Usare `Invoke-Item .\reports\...` solo quando richiesto dall'utente. Preferire la generazione del report e la conferma che il file esiste.
+Never auto-open reports during validation. Do not use `start`, `Invoke-Item`, or equivalents unless the user explicitly asks.
+
+## Implementer post-task verification
+
+```powershell
+git status --short
+git diff --stat
+```
+
+Post-task checks (compact):
+- run Python/unittest validation only if scripts/ or tests/ were touched;
+- verify no committable reports were created;
+- verify commit message format is correct;
+- verify no personal files are included.
 
 ## Commit message format
 
@@ -80,13 +110,14 @@ The commit body or the LLMS.md task history must list what was included when a b
 A task is validation-only when it verifies existing behavior without changing code or docs.
 
 - Validation-only tasks may end with no commit.
+- Correct validation-only outcome: no new commit, clean workspace, verified behavior.
 - Verify that no unexpected GitHub commit was created and that the previous code commit remains current.
 
 ## Git rules
 
 Allowed:
 
-```bash
+```powershell
 git status --short
 git diff --stat
 git add <explicit-paths-only>
@@ -96,7 +127,7 @@ git push origin main
 
 Forbidden unless explicitly ordered by the user:
 
-```bash
+```powershell
 git add .
 git reset
 git clean

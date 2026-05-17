@@ -1,26 +1,40 @@
 # Safety Rules — Archivio Personale AI
 
-These rules apply to all phases of this project. They must never be relaxed without explicit, deliberate review.
+These rules apply to all phases and all implementers (ChatGPT, Claude Code, Codex).
 
 ## Absolute prohibitions
 
-- **No destructive operations** of any kind against the source archive.
-- **No automatic move** — files are never moved without explicit human approval.
-- **No rename** — filenames in the source archive are never changed by this system.
-- **No delete** — files are never deleted by this system.
-- **No overwrite** — source files are never overwritten.
-- **No writing inside the source archive by default** — all outputs go to a user-specified external path.
-- **No real personal files committed to Git** — the repository contains only code, documentation, tests, and example placeholder files.
-- **No external AI API calls for personal file contents** — file paths, names, and contents must not be sent to external APIs or cloud services without explicit user approval.
-- **No cloud storage API automation by default** — Google Drive and similar services may only be accessed as local synced/mirrored folders, not via remote API calls, unless explicitly approved.
+- **No destructive operations** against the source archive.
+- **No automatic move**.
+- **No rename**.
+- **No delete**.
+- **No overwrite**.
+- **No writing inside the source archive by default** — outputs go to a user-specified external path.
+- **No real personal files committed to Git**.
+- **No external/cloud AI API calls for personal file contents**.
+- **No Google Drive API automation by default**.
+- **No n8n runtime activation**.
+- **No MCP/filesystem agent operations on personal files**.
+- **No dependency installs unless explicitly approved**.
 
-## Future move phase — conditions required
+## Operational gate policy
 
-A controlled move phase may only be introduced when ALL of the following are satisfied:
+If a requested step crosses a real gate (move/rename/delete, API/cloud, n8n, MCP, installs, secrets), stop and request explicit user approval.
 
-1. The read-only inventory and dry-run report phase is complete and reviewed.
-2. A `proposed_moves.json` has been generated and manually reviewed by the user.
-3. The user gives explicit approval for each batch of moves.
-4. A rollback plan is in place before any move executes.
+If there is no real gate, execute only the minimum next safe step.
+
+## Reports
+
+Do not auto-open reports with `start`, `Invoke-Item`, or equivalents.
+Commands may be documented, but execution requires explicit user request.
+
+## Future move phase — required conditions
+
+A controlled move phase may be introduced only if all conditions are satisfied:
+
+1. read-only inventory and dry-run report phase complete and reviewed;
+2. `proposed_moves.json` generated and manually reviewed;
+3. explicit user approval for each move batch;
+4. rollback plan defined before execution.
 
 No move, rename, or delete operation shall ever be automatic or unattended.

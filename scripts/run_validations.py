@@ -43,6 +43,11 @@ _STEPS = [
         [sys.executable, "scripts/validate_reports.py", "--help"],
         False,
     ),
+    (
+        "synthetic demo",
+        [sys.executable, "scripts/run_synthetic_demo.py"],
+        True,
+    ),
 ]
 
 

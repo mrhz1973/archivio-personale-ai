@@ -85,20 +85,22 @@ class TestRunnerFailure(unittest.TestCase):
         self.assertEqual(rc, 1)
 
     def test_returns_one_when_any_step_fails(self):
-        results = [_make_result(0), _make_result(2), _make_result(0)]
+        # One result per step in _STEPS; second one fails
+        results = [_make_result(0 if i != 1 else 2) for i in range(len(rv._STEPS))]
         with patch("scripts.run_validations.subprocess.run", side_effect=results):
             rc = rv.main([])
         self.assertEqual(rc, 1)
 
     def test_continues_after_one_failure(self):
         """Runner must not abort early — all steps are attempted."""
+        full_count = sum(1 for _, _, skip in rv._STEPS if not skip) + sum(1 for _, _, skip in rv._STEPS if skip)
         count = [0]
         def _fake(argv, **kw):
             count[0] += 1
             return _make_result(1)
         with patch("scripts.run_validations.subprocess.run", side_effect=_fake):
             rv.main([])
-        self.assertEqual(count[0], 3)
+        self.assertEqual(count[0], len(rv._STEPS))
 
     def test_quick_mode_returns_one_on_failure(self):
         with patch("scripts.run_validations.subprocess.run", return_value=_make_result(1)):
@@ -303,6 +305,47 @@ class TestRunnerSafety(unittest.TestCase):
         for target in rv._COMPILE_TARGETS:
             self.assertTrue(str(target).startswith("scripts/"),
                             f"compile target outside scripts/: {target}")
+
+
+# ── ARCH-0243/0244/0245: synthetic demo integration ───────────────────────────
+
+class TestSyntheticDemoIntegration(unittest.TestCase):
+    """Verify run_validations.py includes or excludes the synthetic demo correctly."""
+
+    def test_full_mode_includes_synthetic_demo(self):
+        """ARCH-0243: full mode runs the synthetic demo step."""
+        calls = []
+        def _fake(argv, **kw):
+            calls.append(argv)
+            return _make_result(0)
+        with patch("scripts.run_validations.subprocess.run", side_effect=_fake):
+            rv.main([])
+        flat = [str(a) for argv in calls for a in argv]
+        self.assertTrue(any("run_synthetic_demo" in c for c in flat),
+                        "synthetic demo must run in full mode")
+
+    def test_quick_mode_excludes_synthetic_demo(self):
+        """ARCH-0244: quick mode skips the synthetic demo step."""
+        calls = []
+        def _fake(argv, **kw):
+            calls.append(argv)
+            return _make_result(0)
+        with patch("scripts.run_validations.subprocess.run", side_effect=_fake):
+            rv.main(["--quick"])
+        flat = [str(a) for argv in calls for a in argv]
+        self.assertFalse(any("run_synthetic_demo" in c for c in flat),
+                         "synthetic demo must not run in quick mode")
+
+    def test_list_mentions_synthetic_demo_without_running(self):
+        """ARCH-0245: --list shows synthetic demo, no subprocess."""
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run") as mock_run:
+            with redirect_stdout(buf):
+                rv.main(["--list"])
+        mock_run.assert_not_called()
+        self.assertIn("synthetic demo", buf.getvalue())
 
 
 if __name__ == "__main__":

@@ -138,20 +138,34 @@ python scripts/generate_action_plan_report.py --input reports/proposed_actions.j
 
 ## Synthetic end-to-end demo
 
-Runs the full pipeline on a temporary directory of synthetic files. No personal files,
-no `reports/` output, no browser opening, no network.
+Runs the full pipeline on a temporary directory of **synthetic, innocuous files** (not personal files).
+All output goes to a temporary directory that is deleted automatically on exit.
+Never writes to `reports/`, never opens a browser, never uses network or API.
+
+| Mode | Command | What runs |
+|------|---------|-----------|
+| full | `python .\scripts\run_synthetic_demo.py` | all 7 pipeline steps |
+| quick | `python .\scripts\run_synthetic_demo.py --quick` | inventory → classify → inventory report |
+| list | `python .\scripts\run_synthetic_demo.py --list` | prints planned steps, exits 0, no subprocess |
 
 ```powershell
+# full run
 python .\scripts\run_synthetic_demo.py
-```
 
-Keep the temporary directory and print its path (useful for manual inspection):
+# minimal end-to-end (inventory → classify → inventory report)
+python .\scripts\run_synthetic_demo.py --quick
 
-```powershell
+# list planned steps without running
+python .\scripts\run_synthetic_demo.py --list
+
+# keep the temporary directory for manual inspection (prints path, no auto-open)
 python .\scripts\run_synthetic_demo.py --keep-temp
 ```
 
-Exit codes: `0` all steps passed, `1` one or more steps failed.
+`--keep-temp` prints the temp directory path for manual inspection only. It does not open any report automatically.
+All demo files are synthetic and temporary; they are not personal files and are not written to `reports/`.
+
+Exit codes: `0` all steps passed (or `--list`), `1` one or more steps failed.
 
 ## Implementer post-task verification
 

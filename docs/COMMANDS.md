@@ -136,6 +136,24 @@ If the action plan report shows the summary and filters but no duplicate rows, o
 python scripts/generate_action_plan_report.py --input reports/proposed_actions.json --output reports/action_plan_report.html
 ```
 
+## Synthetic demo — quickstart
+
+Fastest way to verify the full pipeline without personal files:
+
+```powershell
+# 1. quick smoke-test (inventory → classify → inventory report)
+python .\scripts\run_validations.py --quick
+
+# 2. minimal end-to-end pipeline on synthetic data
+python .\scripts\run_synthetic_demo.py --quick
+
+# 3. full pipeline on synthetic data
+python .\scripts\run_synthetic_demo.py
+
+# 4. keep temp dir for manual inspection (prints paths, no auto-open)
+python .\scripts\run_synthetic_demo.py --keep-temp
+```
+
 ## Synthetic end-to-end demo
 
 Runs the full pipeline on a temporary directory of **synthetic, innocuous files** (not personal files).
@@ -147,6 +165,9 @@ Never writes to `reports/`, never opens a browser, never uses network or API.
 | full | `python .\scripts\run_synthetic_demo.py` | all 7 pipeline steps |
 | quick | `python .\scripts\run_synthetic_demo.py --quick` | inventory → classify → inventory report |
 | list | `python .\scripts\run_synthetic_demo.py --list` | prints planned steps, exits 0, no subprocess |
+| keep | `python .\scripts\run_synthetic_demo.py --keep-temp` | full run, temp dir kept, paths printed |
+| quiet | `python .\scripts\run_synthetic_demo.py --quiet` | full run, suppresses OK lines, prints summary |
+| no-manifest | `python .\scripts\run_synthetic_demo.py --no-manifest` | full run, skips manifest (debug) |
 
 ```powershell
 # full run
@@ -158,14 +179,25 @@ python .\scripts\run_synthetic_demo.py --quick
 # list planned steps without running
 python .\scripts\run_synthetic_demo.py --list
 
-# keep the temporary directory for manual inspection (prints path, no auto-open)
+# keep the temporary directory for manual inspection (prints path and manifest path, no auto-open)
 python .\scripts\run_synthetic_demo.py --keep-temp
 ```
 
-`--keep-temp` prints the temp directory path for manual inspection only. It does not open any report automatically.
+`--keep-temp` prints the temp directory path and the `demo_manifest.json` path for manual inspection only. It does not open any report automatically.
 All demo files are synthetic and temporary; they are not personal files and are not written to `reports/`.
 
 Exit codes: `0` all steps passed (or `--list`), `1` one or more steps failed.
+
+### demo_manifest.json
+
+After each run a `demo_manifest.json` is written **inside the temp directory** (not in `reports/`).
+It is purely **temporary and synthetic**:
+
+- contains: mode, temp_dir basename, timestamps, exit_code, per-step results, generated file list;
+- does **not** contain absolute paths, personal file paths, or credentials;
+- is deleted automatically with the temp dir (unless `--keep-temp`);
+- must **not** be committed to the repository;
+- use `--no-manifest` to skip writing it (e.g. for debug runs).
 
 ## Implementer post-task verification
 

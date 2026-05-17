@@ -126,5 +126,31 @@ class TestCommandsRunnerSafety(unittest.TestCase):
         self.assertIn("no network", section.lower())
 
 
+# ── ARCH-0289/0290: demo_manifest.json documented; no auto-open suggestion ────
+
+class TestCommandsMentionsManifest(unittest.TestCase):
+    """ARCH-0289: COMMANDS.md mentions demo_manifest.json."""
+
+    def test_commands_mentions_manifest_filename(self):
+        self.assertIn("demo_manifest.json", _COMMANDS)
+
+    def test_commands_states_manifest_is_temporary(self):
+        self.assertIn("temporary", _COMMANDS.lower())
+
+    def test_commands_states_manifest_not_in_reports(self):
+        # The docs must clarify that the manifest is not written to reports/
+        self.assertIn("not in `reports/`", _COMMANDS)
+
+    def test_commands_does_not_suggest_auto_open_manifest(self):
+        """ARCH-0290: COMMANDS.md does not suggest auto-opening manifest or reports."""
+        # No Invoke-Item or start command near manifest references
+        idx = _COMMANDS.find("demo_manifest.json")
+        if idx == -1:
+            return
+        surrounding = _COMMANDS[max(0, idx - 200):idx + 200]
+        self.assertNotIn("Invoke-Item", surrounding)
+        self.assertNotRegex(surrounding, r"\bstart\s+\S")
+
+
 if __name__ == "__main__":
     unittest.main()

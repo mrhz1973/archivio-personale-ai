@@ -42,6 +42,17 @@ Do not auto-open reports with `start`, `Invoke-Item`, or equivalents unless expl
 
 - Python 3.8+ (standard library only)
 
+## Synthetic demo
+
+Verify the full pipeline on synthetic data (no personal files, no `reports/` writes):
+
+```powershell
+python .\scripts\run_synthetic_demo.py --quick   # quick smoke-test
+python .\scripts\run_synthetic_demo.py            # full pipeline
+```
+
+See `docs/COMMANDS.md` for all demo options including `--keep-temp`, `--quiet`, and `--no-manifest`.
+
 ## Running tests
 
 ```powershell

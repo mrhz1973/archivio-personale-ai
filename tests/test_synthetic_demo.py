@@ -1,5 +1,5 @@
 """
-ARCH-0218..ARCH-0221, ARCH-0228..ARCH-0250 — Tests for scripts/run_synthetic_demo.py.
+ARCH-0218..ARCH-0221, ARCH-0228..ARCH-0250, ARCH-0269..ARCH-0280 — Tests for scripts/run_synthetic_demo.py.
 
 Verifies that the synthetic demo:
 - produces the expected output files in a temp dir;
@@ -11,11 +11,15 @@ Verifies that the synthetic demo:
 - runs subprocesses from repo root (cwd);
 - fails clearly when an expected script is missing;
 - --quick produces inventory JSON, classification JSON, and inventory HTML;
-- --keep-temp keeps the directory and prints its path;
-- without --keep-temp the directory is removed.
+- --keep-temp keeps the directory and prints its path and manifest path;
+- without --keep-temp the directory is removed;
+- writes demo_manifest.json in full and quick modes;
+- manifest contains correct mode, step counts, and generated files;
+- manifest does not contain reports/ paths, home dir paths, or secret keywords.
 """
 
 import io
+import json
 import os
 import sys
 import tempfile
@@ -169,16 +173,10 @@ class TestDemoSysExecutable(unittest.TestCase):
     """ARCH-0233: subprocess commands use sys.executable."""
 
     def test_run_uses_sys_executable(self):
-        captured = []
-        original_run = demo._run
-
-        def spy(label, argv):
-            return original_run(label, argv)
-
-        calls = []
-
         import subprocess as sp
         original_sp_run = sp.run
+
+        calls = []
 
         def mock_sp_run(cmd, **kwargs):
             calls.append(cmd)
@@ -186,9 +184,7 @@ class TestDemoSysExecutable(unittest.TestCase):
 
         with patch("scripts.run_synthetic_demo.subprocess") as mock_sp:
             mock_sp.run.side_effect = mock_sp_run
-            # Just check _run constructs the command with _PYTHON as first element
             with tempfile.TemporaryDirectory() as tmp:
-                # Manually test _run's command construction
                 pass
 
         # Verify _PYTHON constant is sys.executable
@@ -198,11 +194,8 @@ class TestDemoSysExecutable(unittest.TestCase):
         """Verify that _run prepends _PYTHON to the argv."""
         recorded = []
 
-        import subprocess as sp
-
         def fake_run(cmd, **kwargs):
             recorded.append(cmd[0])
-            # Return a mock result
             class R:
                 returncode = 0
                 stdout = ""
@@ -314,6 +307,185 @@ class TestDemoKeepTemp(unittest.TestCase):
 
         self.assertEqual(len(created), 1)
         self.assertFalse(Path(created[0]).exists())
+
+
+# ── ARCH-0269..ARCH-0278: manifest tests ─────────────────────────────────────
+
+class TestDemoManifestFullMode(unittest.TestCase):
+    """ARCH-0269/0271/0272/0273/0274/0275/0276: manifest in full mode."""
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="archivio_test_manifest_")
+        self._tmpdir = Path(self._tmp)
+        demo._run_pipeline(self._tmpdir, keep_temp=False, quick=False)
+        manifest_path = self._tmpdir / "demo_manifest.json"
+        self._manifest_exists = manifest_path.is_file()
+        if self._manifest_exists:
+            self._manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        else:
+            self._manifest = {}
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    def test_manifest_created_in_full_mode(self):
+        """ARCH-0269: manifest is written after a full run."""
+        self.assertTrue(self._manifest_exists)
+
+    def test_manifest_mode_is_full(self):
+        """ARCH-0271: manifest records mode = full."""
+        self.assertEqual(self._manifest.get("mode"), "full")
+
+    def test_manifest_contains_step_counts(self):
+        """ARCH-0272: manifest contains steps_total, steps_ok, steps_failed."""
+        self.assertIn("steps_total", self._manifest)
+        self.assertIn("steps_ok", self._manifest)
+        self.assertIn("steps_failed", self._manifest)
+        self.assertEqual(self._manifest["steps_total"], len(demo._FULL_STEPS_NAMES))
+        self.assertEqual(self._manifest["steps_failed"], 0)
+
+    def test_manifest_contains_expected_generated_files(self):
+        """ARCH-0273: manifest lists generated files (inventory, classification, action plan)."""
+        paths = {f["path"] for f in self._manifest.get("generated_files", [])}
+        self.assertTrue(any("inventory" in p for p in paths), f"inventory not in {paths}")
+        self.assertTrue(any("classification" in p for p in paths), f"classification not in {paths}")
+        self.assertTrue(any("action_plan" in p for p in paths), f"action_plan not in {paths}")
+
+    def test_manifest_path_does_not_reference_reports_dir(self):
+        """ARCH-0274: manifest temp_dir and file paths do not reference reports/."""
+        text = json.dumps(self._manifest)
+        self.assertNotIn("reports/", text)
+        self.assertNotIn("reports\\", text)
+
+    def test_manifest_temp_dir_has_no_home_path(self):
+        """ARCH-0275: manifest temp_dir is basename only — no user home path."""
+        temp_dir_value = self._manifest.get("temp_dir", "")
+        # Must be a basename (no path separator)
+        self.assertNotIn("/", temp_dir_value)
+        self.assertNotIn("\\", temp_dir_value)
+        # Must not contain the real home directory name
+        home = Path.home().name
+        self.assertNotIn(home, temp_dir_value)
+
+    def test_manifest_has_no_secret_keywords(self):
+        """ARCH-0276: manifest content contains no api_key/access_token/secret/token keywords."""
+        text = json.dumps(self._manifest).lower()
+        for keyword in ("api_key", "access_token", "secret", "token"):
+            self.assertNotIn(keyword, text, f"Found forbidden keyword '{keyword}' in manifest")
+
+    def test_manifest_steps_list_has_labels(self):
+        """Each step entry has a label field."""
+        steps = self._manifest.get("steps", [])
+        self.assertTrue(len(steps) > 0)
+        for step in steps:
+            self.assertIn("label", step)
+            self.assertIn("returncode", step)
+            self.assertIn("status", step)
+
+
+class TestDemoManifestQuickMode(unittest.TestCase):
+    """ARCH-0270/0271: manifest is created in quick mode with correct mode field."""
+
+    def test_manifest_created_in_quick_mode(self):
+        """ARCH-0270: manifest is written after a quick run."""
+        with tempfile.TemporaryDirectory(prefix="archivio_test_manifest_") as tmp:
+            tmpdir = Path(tmp)
+            demo._run_pipeline(tmpdir, keep_temp=False, quick=True)
+            self.assertTrue((tmpdir / "demo_manifest.json").is_file())
+
+    def test_manifest_mode_is_quick(self):
+        """ARCH-0271: manifest records mode = quick."""
+        with tempfile.TemporaryDirectory(prefix="archivio_test_manifest_") as tmp:
+            tmpdir = Path(tmp)
+            demo._run_pipeline(tmpdir, keep_temp=False, quick=True)
+            manifest = json.loads((tmpdir / "demo_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest.get("mode"), "quick")
+
+
+class TestDemoNoManifest(unittest.TestCase):
+    """ARCH-0282/0283: --no-manifest skips manifest but keeps pipeline working."""
+
+    def test_no_manifest_does_not_create_manifest(self):
+        with tempfile.TemporaryDirectory(prefix="archivio_test_nomanifest_") as tmp:
+            tmpdir = Path(tmp)
+            demo._run_pipeline(tmpdir, keep_temp=False, no_manifest=True)
+            self.assertFalse((tmpdir / "demo_manifest.json").exists())
+
+    def test_no_manifest_exit_code_zero(self):
+        code = demo.main(["--no-manifest"])
+        self.assertEqual(code, 0)
+
+    def test_no_manifest_produces_inventory_json(self):
+        with tempfile.TemporaryDirectory(prefix="archivio_test_nomanifest_") as tmp:
+            tmpdir = Path(tmp)
+            demo._run_pipeline(tmpdir, keep_temp=False, no_manifest=True)
+            self.assertTrue((tmpdir / "inventory.json").is_file())
+
+
+class TestDemoQuiet(unittest.TestCase):
+    """ARCH-0279/0280: --quiet reduces output but keeps exit code and manifest."""
+
+    def test_quiet_exit_code_zero(self):
+        """ARCH-0280: --quiet still exits 0 on success."""
+        code = demo.main(["--quiet"])
+        self.assertEqual(code, 0)
+
+    def test_quiet_manifest_still_created(self):
+        """ARCH-0280: manifest is written even with --quiet."""
+        created = []
+        original_mkdtemp = tempfile.mkdtemp
+
+        def spy_mkdtemp(**kwargs):
+            path = original_mkdtemp(**kwargs)
+            created.append(path)
+            return path
+
+        with patch("scripts.run_synthetic_demo.tempfile.mkdtemp", spy_mkdtemp):
+            demo.main(["--quiet", "--keep-temp"])
+
+        self.assertEqual(len(created), 1)
+        manifest = Path(created[0]) / "demo_manifest.json"
+        self.assertTrue(manifest.exists())
+        import shutil
+        shutil.rmtree(created[0], ignore_errors=True)
+
+    def test_quiet_suppresses_header(self):
+        """ARCH-0279: --quiet output does not include the === header line."""
+        buf = io.StringIO()
+        with patch("sys.stdout", buf):
+            demo.main(["--quiet"])
+        output = buf.getvalue()
+        self.assertNotIn("===", output)
+
+    def test_quiet_still_prints_summary(self):
+        """ARCH-0279: --quiet still prints the step count summary."""
+        buf = io.StringIO()
+        with patch("sys.stdout", buf):
+            demo.main(["--quiet"])
+        output = buf.getvalue()
+        self.assertIn("Steps:", output)
+
+
+class TestDemoKeepTempManifestPath(unittest.TestCase):
+    """ARCH-0278: --keep-temp prints both the temp dir path and the manifest path."""
+
+    def test_keep_temp_prints_manifest_path(self):
+        buf = io.StringIO()
+        with patch("sys.stdout", buf):
+            demo.main(["--keep-temp"])
+        output = buf.getvalue()
+
+        # Must mention the manifest file
+        self.assertIn("demo_manifest.json", output)
+
+        # Clean up kept temp dir
+        import shutil
+        for line in output.splitlines():
+            if "Temp directory kept at:" in line:
+                path = Path(line.split("Temp directory kept at:")[-1].strip())
+                shutil.rmtree(path, ignore_errors=True)
+                break
 
 
 if __name__ == "__main__":

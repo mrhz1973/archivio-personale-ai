@@ -15,13 +15,19 @@ Runs the full pipeline on a temporary directory of innocuous synthetic files:
 Output goes to a temporary directory (deleted on exit unless --keep-temp).
 Never writes to reports/, never opens a browser, never uses network or API.
 
+After each run a demo_manifest.json is written inside the temp dir (unless
+--no-manifest). The manifest contains: mode, temp_dir basename, timestamps,
+exit_code, per-step results, and a list of generated files. It is purely
+temporary and synthetic — never commit it or write it to reports/.
+
 Exit codes:
   0  all steps passed (or --list)
   1  one or more steps failed
 """
 
 import argparse
-import os
+import datetime
+import json
 import shutil
 import subprocess
 import sys
@@ -58,21 +64,23 @@ _EXPECTED_SCRIPTS = [
 ]
 
 
-def _run(label, argv):
-    """Run a subprocess step from repo root. Print result. Return True on success."""
+def _run(label, argv, *, quiet=False):
+    """Run a subprocess step from repo root. Print result. Return (ok, returncode)."""
     cmd = [_PYTHON] + [str(a) for a in argv]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(_REPO_ROOT))
     ok = result.returncode == 0
-    status = "[OK]  " if ok else "[FAIL]"
-    print(f"{status} {label}")
-    if not ok:
-        if result.stdout.strip():
-            for line in result.stdout.strip().splitlines():
-                print(f"       {line}")
-        if result.stderr.strip():
-            for line in result.stderr.strip().splitlines():
-                print(f"       {line}")
-    return ok
+    if not quiet or not ok:
+        status = "[OK]  " if ok else "[FAIL]"
+        if not quiet or not ok:
+            print(f"{status} {label}")
+        if not ok:
+            if result.stdout.strip():
+                for line in result.stdout.strip().splitlines():
+                    print(f"       {line}")
+            if result.stderr.strip():
+                for line in result.stderr.strip().splitlines():
+                    print(f"       {line}")
+    return ok, result.returncode
 
 
 def _make_synthetic_source(base: Path) -> Path:
@@ -125,6 +133,46 @@ def _build_steps(tmpdir: Path, src: Path):
     ]
 
 
+def _collect_generated_files(tmpdir: Path):
+    """Return list of file records relative to tmpdir (excludes source/ input tree and manifest)."""
+    source_dir = tmpdir / "source"
+    records = []
+    for f in sorted(tmpdir.rglob("*")):
+        if not f.is_file():
+            continue
+        try:
+            f.relative_to(source_dir)
+            continue  # skip source/ input files
+        except ValueError:
+            pass
+        if f.name == "demo_manifest.json":
+            continue  # skip manifest itself to avoid circular reference
+        rel = str(f.relative_to(tmpdir))
+        ext = f.suffix.lstrip(".").lower() or "bin"
+        records.append({"path": rel, "type": ext, "size": f.stat().st_size})
+    return records
+
+
+def _write_manifest(tmpdir: Path, mode: str, started_at: str, finished_at: str,
+                    exit_code: int, step_results: list):
+    """Write demo_manifest.json inside tmpdir. Stores basename only — no absolute paths."""
+    manifest = {
+        "mode": mode,
+        "temp_dir": tmpdir.name,  # basename only: no personal/home path
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "exit_code": exit_code,
+        "steps_total": len(step_results),
+        "steps_ok": sum(1 for s in step_results if s["status"] == "ok"),
+        "steps_failed": sum(1 for s in step_results if s["status"] != "ok"),
+        "steps": step_results,
+        "generated_files": _collect_generated_files(tmpdir),
+    }
+    (tmpdir / "demo_manifest.json").write_text(
+        json.dumps(manifest, indent=2), encoding="utf-8"
+    )
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Run the full pipeline on synthetic data (no personal files, no reports/).",
@@ -144,6 +192,16 @@ def main(argv=None):
         action="store_true",
         help="List planned steps without executing them, then exit 0.",
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-step OK output and header. Failures and summary are always printed.",
+    )
+    parser.add_argument(
+        "--no-manifest",
+        action="store_true",
+        help="Skip writing demo_manifest.json (useful for debugging; default is manifest on).",
+    )
     args = parser.parse_args(argv)
 
     if args.list:
@@ -156,18 +214,28 @@ def main(argv=None):
 
     tmpdir = Path(tempfile.mkdtemp(prefix="archivio_demo_"))
     try:
-        return _run_pipeline(tmpdir, keep_temp=args.keep_temp, quick=args.quick)
+        return _run_pipeline(
+            tmpdir,
+            keep_temp=args.keep_temp,
+            quick=args.quick,
+            no_manifest=args.no_manifest,
+            quiet=args.quiet,
+        )
     except Exception as exc:
         print(f"[ERROR] unexpected exception: {exc}")
         return 1
     finally:
         if args.keep_temp:
+            manifest_path = tmpdir / "demo_manifest.json"
             print(f"\nTemp directory kept at: {tmpdir}")
+            if manifest_path.exists():
+                print(f"Manifest:              {manifest_path}")
         else:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def _run_pipeline(tmpdir: Path, *, keep_temp: bool, quick: bool = False) -> int:
+def _run_pipeline(tmpdir: Path, *, keep_temp: bool, quick: bool = False,
+                  no_manifest: bool = False, quiet: bool = False) -> int:
     missing = _check_expected_scripts()
     if missing:
         for m in missing:
@@ -181,23 +249,42 @@ def _run_pipeline(tmpdir: Path, *, keep_temp: bool, quick: bool = False) -> int:
     steps = [(lbl, argv) for lbl, argv in all_steps if not quick or lbl in quick_names]
 
     mode = "quick" if quick else "full"
-    print(f"=== Archivio Personale AI — synthetic end-to-end demo ({mode}) ===")
-    print(f"Working in: {tmpdir}\n")
+    if not quiet:
+        print(f"=== Archivio Personale AI — synthetic end-to-end demo ({mode}) ===")
+        print(f"Working in: {tmpdir}\n")
 
+    started_at = datetime.datetime.now().isoformat(timespec="seconds")
     ok_count = 0
     fail_count = 0
+    step_results = []
 
     for label, argv in steps:
-        if _run(label, argv):
+        ok, rc = _run(label, argv, quiet=quiet)
+        step_results.append({
+            "label": label,
+            "command": label,  # safe: step name only, no absolute paths
+            "returncode": rc,
+            "status": "ok" if ok else "fail",
+        })
+        if ok:
             ok_count += 1
         else:
             fail_count += 1
 
+    finished_at = datetime.datetime.now().isoformat(timespec="seconds")
     total = ok_count + fail_count
-    print()
-    print(f"Steps: {total}  OK: {ok_count}  Failed: {fail_count}  Dir: {tmpdir}")
+    exit_code = 0 if fail_count == 0 else 1
 
-    return 0 if fail_count == 0 else 1
+    if not no_manifest:
+        _write_manifest(tmpdir, mode, started_at, finished_at, exit_code, step_results)
+
+    if not quiet:
+        print()
+        print(f"Steps: {total}  OK: {ok_count}  Failed: {fail_count}  Dir: {tmpdir}")
+    else:
+        print(f"Steps: {total}  OK: {ok_count}  Failed: {fail_count}")
+
+    return exit_code
 
 
 if __name__ == "__main__":

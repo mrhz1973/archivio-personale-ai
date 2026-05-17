@@ -39,6 +39,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0185..ARCH-0204 | Batch 17 — synthetic fixture consolidation and validation stability | Closed — commit `cdf28ec` |
 | ARCH-0205..ARCH-0224 | Batch 18 — synthetic end-to-end demo workflow | Closed — commit `9acf5bf` |
 | ARCH-0225..ARCH-0259 | Batch 19 — synthetic demo polish and full validation integration | Closed — commit `812da45` |
+| ARCH-0260..ARCH-0294 | Batch 20 — synthetic demo manifest and user-facing quickstart | Closed — commit pending |
 
 ## Current phase
 

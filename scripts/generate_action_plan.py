@@ -36,6 +36,18 @@ def is_root_file(relative_path: str) -> bool:
     return PurePosixPath(normalized).parent == PurePosixPath(".")
 
 
+def top_level_folder(relative_path: str) -> str:
+    normalized = normalize_relative_path(relative_path)
+    parts = PurePosixPath(normalized).parts
+    if len(parts) <= 1:
+        return "(root)"
+    return parts[0]
+
+
+def filename_of(relative_path: str) -> str:
+    return PurePosixPath(normalize_relative_path(relative_path)).name.lower()
+
+
 def build_classification_lookup(classifications_data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     items = classifications_data.get("classifications", [])
     if not isinstance(items, list):
@@ -104,6 +116,36 @@ def build_sort_candidates(
     return candidates
 
 
+def duplicate_review_priority(file_entries: list[dict[str, Any]]) -> tuple[str, str]:
+    """Return a conservative review priority and reason for a duplicate group."""
+
+    filenames = {filename_of(str(item.get("relative_path", ""))) for item in file_entries}
+    top_folders = {top_level_folder(str(item.get("relative_path", ""))) for item in file_entries}
+    all_context_bound = all(bool(item.get("context_bound", False)) for item in file_entries)
+    same_filename = len(filenames) == 1
+    same_top_folder = len(top_folders) == 1
+
+    if all_context_bound and not same_top_folder:
+        return (
+            "low_context_risk_review",
+            "Exact duplicates appear in different top-level folders. They may be intentional copies for separate projects.",
+        )
+    if all_context_bound and same_top_folder and same_filename:
+        return (
+            "medium_review",
+            "Exact duplicates share the same top-level folder and filename. Review manually before any future action.",
+        )
+    if not all_context_bound and same_filename:
+        return (
+            "higher_review_value",
+            "At least one duplicate is not context-bound and filenames match. This may be a useful manual cleanup candidate.",
+        )
+    return (
+        "manual_review",
+        "Exact duplicate candidates require manual interpretation before any future action.",
+    )
+
+
 def build_duplicate_groups(
     inventory_lookup: dict[str, dict[str, Any]],
     classification_lookup: dict[str, dict[str, Any]],
@@ -123,10 +165,12 @@ def build_duplicate_groups(
 
         file_entries = []
         total_size = 0
+        largest_size = 0
         for info in sorted(files, key=lambda item: normalize_relative_path(str(item.get("relative_path", "")))):
             rel = normalize_relative_path(str(info.get("relative_path", "")))
             size = int(info.get("size_bytes", 0) or 0)
             total_size += size
+            largest_size = max(largest_size, size)
             classification = classification_lookup.get(rel, {})
             file_entries.append(
                 {
@@ -135,23 +179,42 @@ def build_duplicate_groups(
                     "category": classification.get("category", "Misc"),
                     "location_policy": classification.get("location_policy", "classify_only"),
                     "context_bound": bool(classification.get("context_bound", False)),
+                    "top_level_folder": top_level_folder(rel),
                 }
             )
+
+        priority, priority_reason = duplicate_review_priority(file_entries)
+        potential_reclaimable_bytes = max(0, total_size - largest_size)
 
         groups.append(
             {
                 "action_type": "duplicate_group",
                 "status": "review_only",
+                "review_priority": priority,
+                "review_priority_reason": priority_reason,
                 "sha256": digest,
                 "count": len(file_entries),
                 "total_size_bytes": total_size,
+                "potential_reclaimable_bytes": potential_reclaimable_bytes,
                 "files": file_entries,
                 "reason": "Exact duplicate candidates based on identical SHA-256. Review manually; no deletion is proposed.",
                 "dry_run_only": True,
             }
         )
 
-    return sorted(groups, key=lambda group: (group["count"], group["total_size_bytes"]), reverse=True)
+    return sorted(
+        groups,
+        key=lambda group: (group["potential_reclaimable_bytes"], group["count"], group["total_size_bytes"]),
+        reverse=True,
+    )
+
+
+def build_priority_counts(duplicate_groups: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for group in duplicate_groups:
+        priority = str(group.get("review_priority", "manual_review"))
+        counts[priority] = counts.get(priority, 0) + 1
+    return dict(sorted(counts.items(), key=lambda x: x[1], reverse=True))
 
 
 def build_action_plan(inventory_data: dict[str, Any], classifications_data: dict[str, Any]) -> dict[str, Any]:
@@ -163,6 +226,7 @@ def build_action_plan(inventory_data: dict[str, Any], classifications_data: dict
 
     policy_counts = classifications_data.get("summary", {}).get("location_policy_counts", {})
     duplicate_files_count = sum(int(group["count"]) for group in duplicate_groups)
+    potential_reclaimable_bytes = sum(int(group.get("potential_reclaimable_bytes", 0)) for group in duplicate_groups)
 
     return {
         "summary": {
@@ -171,6 +235,8 @@ def build_action_plan(inventory_data: dict[str, Any], classifications_data: dict
             "root_sort_candidates_count": len(sort_candidates),
             "duplicate_groups_count": len(duplicate_groups),
             "duplicate_files_count": duplicate_files_count,
+            "duplicate_priority_counts": build_priority_counts(duplicate_groups),
+            "potential_reclaimable_bytes": potential_reclaimable_bytes,
             "keep_in_place_count": int(policy_counts.get("keep_in_place", 0) or 0),
             "classify_only_count": int(policy_counts.get("classify_only", 0) or 0),
             "dry_run_only": True,
@@ -216,7 +282,8 @@ def main() -> None:
         "Root sort candidates: "
         f"{summary['root_sort_candidates_count']}, "
         f"duplicate groups: {summary['duplicate_groups_count']}, "
-        f"duplicate files: {summary['duplicate_files_count']}"
+        f"duplicate files: {summary['duplicate_files_count']}, "
+        f"potential reclaimable bytes: {summary['potential_reclaimable_bytes']}"
     )
 
 

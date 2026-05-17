@@ -94,6 +94,12 @@ Exit codes: `0` all checks passed (or `--list`), `1` one or more checks failed.
 python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output reports/inventory.json
 ```
 
+**JSON output format:**
+- `metadata` — `schema_version`, `generated_at_iso` (ISO UTC), `tool`, `mode` (`read_only`)
+- `summary` — file counts, `total_size_bytes`, `total_size_human`, `directories_scanned`, `ignored_dirs_count`, `extensions_count`, `skipped_count`, `errors_count`
+- `files` — list of file records sorted deterministically by `relative_path`
+- `errors` — list of unreadable paths sorted by `path`
+
 ## Inventory HTML report example
 
 ```powershell

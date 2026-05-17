@@ -76,6 +76,62 @@ def build_extensions_count(files: list) -> dict:
     return dict(sorted(counts.items(), key=lambda x: x[1], reverse=True))
 
 
+def format_bytes(n: int) -> str:
+    """Return a human-readable size string using standard library only."""
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
+        if n < 1024 or unit == "TiB":
+            return f"{n:.1f} {unit}" if unit != "B" else f"{n} B"
+        n /= 1024
+
+
+def scan_directory(source: Path):
+    files = []
+    errors = []
+    skipped = 0
+    dirs_scanned = 0
+    ignored_dirs_count = 0
+
+    for root, dirs, filenames in os.walk(source, followlinks=False):
+        dirs_scanned += 1
+        pruned = []
+        for d in dirs:
+            if d in IGNORED_DIRS:
+                ignored_dirs_count += 1
+            else:
+                pruned.append(d)
+        dirs[:] = pruned
+
+        for name in filenames:
+            if should_ignore_file(name):
+                skipped += 1
+                continue
+
+            file_path = Path(root) / name
+            rel = file_path.relative_to(source)
+
+            try:
+                stat = file_path.stat()
+                mtime = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
+                digest = sha256_of_file(file_path)
+                files.append(
+                    {
+                        "relative_path": str(rel),
+                        "filename": name,
+                        "extension": file_path.suffix.lower(),
+                        "size_bytes": stat.st_size,
+                        "modified_time_iso": mtime,
+                        "sha256": digest,
+                    }
+                )
+            except (PermissionError, OSError) as exc:
+                errors.append({"path": str(rel), "error": str(exc)})
+
+    files.sort(key=lambda f: f["relative_path"])
+    errors.sort(key=lambda e: e["path"])
+
+    return files, errors, skipped, dirs_scanned, ignored_dirs_count
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=(
@@ -112,15 +168,25 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Scanning: {source}")
-    files, errors, skipped = scan_directory(source)
+    generated_at = datetime.now(tz=timezone.utc).isoformat()
+    files, errors, skipped, dirs_scanned, ignored_dirs_count = scan_directory(source)
 
     total_size = sum(f["size_bytes"] for f in files)
 
     result = {
+        "metadata": {
+            "schema_version": "1.0",
+            "generated_at_iso": generated_at,
+            "tool": "inventory_readonly.py",
+            "mode": "read_only",
+        },
         "summary": {
             "source": str(source),
             "total_files": len(files),
             "total_size_bytes": total_size,
+            "total_size_human": format_bytes(total_size),
+            "directories_scanned": dirs_scanned,
+            "ignored_dirs_count": ignored_dirs_count,
             "extensions_count": build_extensions_count(files),
             "skipped_count": skipped,
             "errors_count": len(errors),

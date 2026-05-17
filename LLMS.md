@@ -32,6 +32,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0095..ARCH-0104 | Batch 10 — report generator regression tests | Closed — commit `1566ea8` |
 | ARCH-0105..ARCH-0114 | Batch 11 — CLI smoke tests and docs consistency | Closed — commit `1eada61` |
 | ARCH-0115..ARCH-0124 | Batch 12 — test hygiene and safety assertions | Closed — commit `0bd1304` |
+| ARCH-0125..ARCH-0134 | Batch 13 — docs smoke alignment and tracking fix | Closed — commit pending |
 
 ## Current phase
 

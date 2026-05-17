@@ -26,6 +26,14 @@ python -m py_compile scripts/inventory_readonly.py scripts/generate_inventory_re
 python -m unittest discover -s tests -v
 ```
 
+Run the full test suite (compact form):
+
+```powershell
+python -m unittest discover
+```
+
+Tests use synthetic data and temporary directories only. Do not reference `reports/` or personal files inside tests.
+
 ## Inventory example
 
 ```powershell

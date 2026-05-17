@@ -25,6 +25,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0024..ARCH-0033 | Batch 3 — operational guardrails | Closed — commit `23f59ae` |
 | ARCH-0034..ARCH-0044 | Batch 4 — action report rendering and orchestration rules | Closed — commit `1348ef1` |
 | ARCH-0045..ARCH-0054 | Batch 5 — tracking and report verification hardening | Closed — commit `4287ff1` |
+| ARCH-0055..ARCH-0064 | Batch 6 — auto-push policy and report validation tooling | Closed — commit pending |
 
 ## Current phase
 
@@ -149,9 +150,32 @@ After a push or merge, ChatGPT should verify the result on GitHub directly when 
 
 Prompts to Claude Code must include: preflight commands, explicit file scope, validation commands, git diff/status checks, and commit instructions. This ensures the user does not need to run routine commands manually.
 
+## Auto-push authorization
+
+Claude Code may run `git push origin main` automatically after:
+- tests pass;
+- commit succeeds;
+- branch is main;
+- workspace is clean post-commit;
+- only authorized files are included;
+- no reports/ artifacts committed.
+
+Claude Code must stop before push on any blocker: dirty or misaligned workspace, branch not main, failed tests, push rejection or conflict, personal files, secrets, install, cloud/API, move/rename/delete.
+
 ## Division of labor: real gates vs. routine work
 
-The user should manually perform only real gates: push, merge, install, secrets, API/cloud operations, move/rename/delete on personal files, implementer switch, or resolving a dirty workspace. Routine validation, documentation updates, test runs, and commits of authorized files are handled by Claude Code.
+Routine commit and push can be handled by Claude Code under standing authorization. User intervention is required for: merge PRs, conflicts, installs, secrets, API/cloud, personal files, destructive operations, implementer switch, or dirty workspace.
+
+## Final output requirement for pushed batches
+
+Claude Code final output after an implementation batch must include:
+- preflight result;
+- validation result;
+- files changed;
+- commit hash;
+- push result;
+- final `git status --short --branch`;
+- confirmation that reports/ and personal files were not committed.
 
 ## Documentation policy
 

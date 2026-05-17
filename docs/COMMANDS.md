@@ -76,6 +76,22 @@ Invoke-Item ./reports/action_plan_report.html
 
 Never auto-open reports during validation. Do not use `start`, `Invoke-Item`, or equivalents unless the user explicitly asks.
 
+## Report validation (structural, no browser)
+
+Validate generated HTML reports structurally without opening them. Does not modify source archive files.
+
+```powershell
+python scripts/validate_reports.py
+```
+
+Optional: pass explicit paths to override defaults.
+
+```powershell
+python scripts/validate_reports.py reports/inventory_report.html reports/classification_report.html reports/action_plan_report.html
+```
+
+Missing report files are skipped with `[SKIP]`. Structural failures are reported with `[FAIL]`.
+
 ## Troubleshooting: blank duplicate table in action report
 
 If the action plan report shows the summary and filters but no duplicate rows, open the browser Console (F12) for JavaScript errors, then regenerate the report:

@@ -29,6 +29,11 @@ _COMPILE_TARGETS = [
 # skip_in_quick=False → runs in both quick and full mode
 _STEPS = [
     (
+        "first-run check",
+        [sys.executable, "scripts/run_first_time_check.py"],
+        True,
+    ),
+    (
         "py_compile",
         [sys.executable, "-m", "py_compile"] + _COMPILE_TARGETS,
         False,

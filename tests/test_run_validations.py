@@ -497,5 +497,60 @@ class TestNoDemoFlag(unittest.TestCase):
         self.assertIn("skipped", buf.getvalue())
 
 
+# ── ARCH-0370..0372: first-run check integration ─────────────────────────────
+
+class TestFirstRunCheckIntegration(unittest.TestCase):
+    """ARCH-0370..0372: first-run check is full-only and listed correctly."""
+
+    def test_full_mode_includes_first_run_check(self):
+        """ARCH-0370: full mode runs the first-run check step."""
+        calls = []
+        def _fake(argv, **kw):
+            calls.append(argv)
+            return _make_result(0)
+        with patch("scripts.run_validations.subprocess.run", side_effect=_fake):
+            rv.main([])
+        flat = [str(a) for argv in calls for a in argv]
+        self.assertTrue(any("run_first_time_check" in c for c in flat),
+                        "first-run check must run in full mode")
+
+    def test_quick_mode_excludes_first_run_check(self):
+        """ARCH-0371: quick mode skips the first-run check step."""
+        calls = []
+        def _fake(argv, **kw):
+            calls.append(argv)
+            return _make_result(0)
+        with patch("scripts.run_validations.subprocess.run", side_effect=_fake):
+            rv.main(["--quick"])
+        flat = [str(a) for argv in calls for a in argv]
+        self.assertFalse(any("run_first_time_check" in c for c in flat),
+                         "first-run check must not run in quick mode")
+
+    def test_list_mentions_first_run_check_without_running(self):
+        """ARCH-0372: --list shows first-run check, no subprocess."""
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run") as mock_run:
+            with redirect_stdout(buf):
+                rv.main(["--list"])
+        mock_run.assert_not_called()
+        self.assertIn("first-run check", buf.getvalue())
+
+    def test_list_shows_first_run_check_as_full_only(self):
+        """ARCH-0372: --list marks first-run check as full only."""
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run"):
+            with redirect_stdout(buf):
+                rv.main(["--list"])
+        output = buf.getvalue()
+        lines = [l for l in output.splitlines() if "first-run check" in l]
+        self.assertTrue(lines, "first-run check not found in --list output")
+        self.assertIn("full only", lines[0],
+                      "first-run check should be labelled 'full only' in --list")
+
+
 if __name__ == "__main__":
     unittest.main()

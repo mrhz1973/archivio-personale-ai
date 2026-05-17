@@ -1,11 +1,9 @@
 """
-ARCH-0136..ARCH-0139 — Local validation runner. Standard library only.
-
-Does not open reports, does not use the network, does not modify reports/ or
-personal files. Safe to run at any point in the dev workflow.
+ARCH-0136..ARCH-0139, ARCH-0147..ARCH-0158 — Local validation runner.
+Standard library only. No network, no report opening, no personal files.
 
 Exit codes:
-  0   all checks passed
+  0   all checks passed (or --list)
   1   one or more checks failed
 """
 
@@ -27,6 +25,8 @@ _COMPILE_TARGETS = [
 ]
 
 # Each step: (label, argv, skip_in_quick)
+# skip_in_quick=True  → runs in full mode only
+# skip_in_quick=False → runs in both quick and full mode
 _STEPS = [
     (
         "py_compile",
@@ -36,7 +36,7 @@ _STEPS = [
     (
         "unittest discover",
         [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
-        True,   # skipped in --quick mode
+        True,
     ),
     (
         "validate_reports --help",
@@ -44,6 +44,11 @@ _STEPS = [
         False,
     ),
 ]
+
+
+def _check_compile_targets():
+    """Return list of compile targets that do not exist under _REPO."""
+    return [t for t in _COMPILE_TARGETS if not (_REPO / t).exists()]
 
 
 def _run_step(label, argv):
@@ -64,17 +69,43 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Run local project validations (stdlib only, no network, no report opening).",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="Exit codes:\n  0  all checks passed\n  1  one or more checks failed",
+        epilog=(
+            "Exit codes:\n"
+            "  0  all checks passed (or --list)\n"
+            "  1  one or more checks failed"
+        ),
     )
     parser.add_argument(
         "--quick",
         action="store_true",
         help="Run only essential checks (skip unittest discover).",
     )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List planned checks without running them, then exit 0.",
+    )
     args = parser.parse_args(argv)
 
+    if args.list:
+        print("Planned checks:")
+        for label, _, skip_in_quick in _STEPS:
+            mode = "quick+full" if not skip_in_quick else "full only "
+            print(f"  [{mode}] {label}")
+        return 0
+
     failures = []
-    for label, cmd, skip_in_quick in _STEPS:
+
+    # Robustness check: verify all compile targets exist before running py_compile
+    missing = _check_compile_targets()
+    if missing:
+        print(f"[FAIL] py_compile: missing expected targets: {', '.join(missing)}")
+        failures.append("py_compile")
+        run_steps = [(l, c, s) for l, c, s in _STEPS if l != "py_compile"]
+    else:
+        run_steps = list(_STEPS)
+
+    for label, cmd, skip_in_quick in run_steps:
         if args.quick and skip_in_quick:
             print(f"[SKIP] {label} (--quick)")
             continue

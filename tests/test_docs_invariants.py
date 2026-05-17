@@ -83,5 +83,48 @@ class TestLLMSTaskIDUniquenessRule(unittest.TestCase):
         )
 
 
+# ── ARCH-0161: COMMANDS.md mentions run_validations.py ───────────────────────
+
+class TestCommandsMentionsRunner(unittest.TestCase):
+
+    def test_run_validations_mentioned(self):
+        self.assertIn("run_validations.py", _COMMANDS)
+
+    def test_quick_flag_mentioned(self):
+        self.assertIn("--quick", _COMMANDS)
+
+    def test_list_flag_mentioned(self):
+        self.assertIn("--list", _COMMANDS)
+
+
+# ── ARCH-0162: COMMANDS.md does not present runner as modifying personal files ─
+
+class TestCommandsRunnerSafety(unittest.TestCase):
+
+    def _runner_section(self):
+        match = re.search(
+            r"## Local validation runner\b(.+?)(?=\n## |\Z)", _COMMANDS, re.DOTALL
+        )
+        self.assertIsNotNone(match, "Local validation runner section not found in COMMANDS.md")
+        return match.group(1)
+
+    def test_runner_section_has_no_personal_file_modification(self):
+        section = self._runner_section()
+        # The section must not suggest that the runner modifies/touches personal files.
+        # Safety notes that *deny* this (e.g. "no personal files") are acceptable.
+        for phrase in ("modifica file personali", "tocca file personali",
+                       "move personal", "rename personal", "delete personal",
+                       "modifies personal files", "touches personal files"):
+            self.assertNotIn(phrase, section.lower())
+
+    def test_runner_section_has_no_reports_modification(self):
+        section = self._runner_section()
+        self.assertNotIn("modif", section.lower())
+
+    def test_runner_section_states_no_network(self):
+        section = self._runner_section()
+        self.assertIn("no network", section.lower())
+
+
 if __name__ == "__main__":
     unittest.main()

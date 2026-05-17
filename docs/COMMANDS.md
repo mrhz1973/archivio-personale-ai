@@ -36,19 +36,26 @@ Tests use synthetic data and temporary directories only. Do not reference `repor
 
 ## Local validation runner
 
-Run all project validations in one command (stdlib only, no network, no report opening):
+`scripts/run_validations.py` — stdlib only, no network, no report opening, no personal files.
+
+| Mode | Command | What runs |
+|------|---------|-----------|
+| full | `python .\scripts\run_validations.py` | py_compile + unittest discover + validate_reports --help |
+| quick | `python .\scripts\run_validations.py --quick` | py_compile + validate_reports --help (skips unittest) |
+| list | `python .\scripts\run_validations.py --list` | prints planned checks, exits 0, no subprocess |
 
 ```powershell
+# full run
 python .\scripts\run_validations.py
-```
 
-Quick mode — skips unittest, runs only py_compile and validate_reports --help:
-
-```powershell
+# quick essentials only
 python .\scripts\run_validations.py --quick
+
+# list planned checks without running
+python .\scripts\run_validations.py --list
 ```
 
-Exit codes: `0` all checks passed, `1` one or more checks failed.
+Exit codes: `0` all checks passed (or `--list`), `1` one or more checks failed.
 
 ## Inventory example
 

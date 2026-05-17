@@ -56,34 +56,6 @@ def build_html(data: dict) -> str:
             "</tr>\n"
         )
 
-    shown_groups = duplicate_groups[:100]
-    hidden_groups = max(0, len(duplicate_groups) - len(shown_groups))
-    duplicate_rows = ""
-    for group in shown_groups:
-        files_html = "<ul>" + "".join(
-            "<li>"
-            f"{html.escape(str(file.get('relative_path', '')))} "
-            f"[<em>{html.escape(str(file.get('top_level_folder', '')))}</em>] "
-            f"({html.escape(str(file.get('location_policy', '')))},"
-            f" {'context-bound' if file.get('context_bound') else 'not context-bound'},"
-            f" {fmt_size(int(file.get('size_bytes', 0) or 0))})"
-            "</li>"
-            for file in group.get("files", [])
-        ) + "</ul>"
-        priority_reason = html.escape(str(group.get("review_priority_reason", "")))
-        duplicate_rows += (
-            "<tr>"
-            f"<td>{html.escape(str(group.get('sha256', ''))[:16])}…</td>"
-            f"<td>{html.escape(str(group.get('review_priority', '')))}"
-            f"<br><small>{priority_reason}</small></td>"
-            f"<td>{int(group.get('count', 0) or 0)}</td>"
-            f"<td>{fmt_size(int(group.get('potential_reclaimable_bytes', 0) or 0))}</td>"
-            f"<td>{fmt_size(int(group.get('total_size_bytes', 0) or 0))}</td>"
-            f"<td>{files_html}</td>"
-            f"<td>{html.escape(str(group.get('status', '')))}</td>"
-            "</tr>\n"
-        )
-
     sort_section = (
         f"""
         <h2>Root Sort Candidates (first 200)</h2>
@@ -109,24 +81,15 @@ def build_html(data: dict) -> str:
         else ""
     )
 
-    hidden_note = (
-        f"<p><em>Showing first {len(shown_groups)} of {duplicate_groups_count} groups. "
-        f"{hidden_groups} groups not shown — run with all data to see the full list.</em></p>"
-        if hidden_groups > 0
-        else ""
-    )
-    duplicate_section = (
-        f"""
-        <h2>Exact Duplicate Groups (sorted by potential reclaimable size)</h2>
-        <p>Exact duplicate candidates are based on identical SHA-256 hashes. <strong>Potential reclaimable size is theoretical</strong> and assumes keeping one copy per group; it is not a delete instruction. No deletion is proposed. Context-bound files (inside project folders) should be treated with extra caution.</p>
-        {hidden_note}
-        <table>
-          <thead><tr><th>SHA-256</th><th>Review Priority / Reason</th><th>Count</th><th>Potential Reclaimable</th><th>Total Size</th><th>Files</th><th>Status</th></tr></thead>
-          <tbody>{duplicate_rows}</tbody>
-        </table>
-        """
-        if duplicate_rows
-        else "<h2>Exact Duplicate Groups</h2><p>No exact duplicate groups found.</p>"
+    # Embed all duplicate groups as JSON for client-side filtering.
+    groups_json = json.dumps(duplicate_groups, ensure_ascii=False)
+
+    known_priorities = sorted({
+        str(g.get("review_priority", "")) for g in duplicate_groups if g.get("review_priority")
+    })
+    priority_options = "\n".join(
+        f'<option value="{html.escape(p)}">{html.escape(p)}</option>'
+        for p in known_priorities
     )
 
     return f"""<!DOCTYPE html>
@@ -144,13 +107,29 @@ def build_html(data: dict) -> str:
     tr:nth-child(even) {{ background: #fafafa; }}
     .stat {{ display: inline-block; margin: 0 2em 1em 0; }}
     .stat span {{ display: block; font-size: 2em; font-weight: bold; color: #2255aa; }}
-    .warning {{ padding: 1em; background: #fff6d8; border: 1px solid #e5c45b; }}
+    .warning {{ padding: 1em; background: #fff6d8; border: 1px solid #e5c45b; margin-bottom: 1em; }}
+    .filters {{ display: flex; flex-wrap: wrap; gap: 1em; align-items: center;
+                padding: 0.8em 1em; background: #f5f5f5; border: 1px solid #ddd;
+                margin-bottom: 1em; border-radius: 4px; }}
+    .filters label {{ font-size: 0.9em; }}
+    .filters input[type=text] {{ padding: 4px 8px; border: 1px solid #bbb; border-radius: 3px; width: 260px; }}
+    .filters select {{ padding: 4px 8px; border: 1px solid #bbb; border-radius: 3px; }}
+    #group-count {{ font-weight: bold; color: #2255aa; }}
+    #dup-tbody tr.hidden {{ display: none; }}
   </style>
 </head>
 <body>
   <h1>Archivio Personale AI — Proposed Actions Report</h1>
   <p><strong>Source:</strong> {source}</p>
-  <p class="warning"><strong>Review only:</strong> this report asks what could be done. It does not move, rename, delete, overwrite, or reorganize any file. Files already inside folders remain protected by the keep_in_place policy.</p>
+  <p class="warning">
+    <strong>Review only:</strong> this report asks what could be done. It does not move, rename,
+    delete, overwrite, or reorganize any file. Files already inside folders remain protected by
+    the keep_in_place policy.<br>
+    <strong>Potential reclaimable size is theoretical</strong> — it assumes keeping one copy per
+    group and is not a delete instruction. No deletion is proposed.<br>
+    <strong>Context-bound files</strong> (inside project or work folders) require extra caution
+    before any future manual action.
+  </p>
 
   <h2>Summary</h2>
   <div>
@@ -164,7 +143,124 @@ def build_html(data: dict) -> str:
 
   {sort_section}
   {priority_section}
-  {duplicate_section}
+
+  <h2>Exact Duplicate Groups (sorted by potential reclaimable size)</h2>
+  <p>Exact duplicate candidates are based on identical SHA-256 hashes. All {duplicate_groups_count} groups are loaded; use the filters below to narrow the list.</p>
+
+  <div class="filters">
+    <label>
+      Search paths:&nbsp;
+      <input type="text" id="path-filter" placeholder="type to filter by file path…">
+    </label>
+    <label>
+      Priority:&nbsp;
+      <select id="priority-filter">
+        <option value="">all</option>
+        {priority_options}
+      </select>
+    </label>
+    <label>
+      <input type="checkbox" id="cb-context-bound">
+      show only groups with context-bound files
+    </label>
+    <label>
+      <input type="checkbox" id="cb-reclaimable">
+      show only groups with potential reclaimable &gt; 0
+    </label>
+    <span>Showing <span id="group-count">…</span> of {duplicate_groups_count} groups</span>
+  </div>
+
+  <table id="dup-table">
+    <thead>
+      <tr>
+        <th>SHA-256</th>
+        <th>Review Priority / Reason</th>
+        <th>Count</th>
+        <th>Potential Reclaimable</th>
+        <th>Total Size</th>
+        <th>Files</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="dup-tbody"></tbody>
+  </table>
+
+  <script>
+  (function () {{
+    var GROUPS = {groups_json};
+
+    function fmtSize(bytes) {{
+      var units = ["B","KB","MB","GB","TB"];
+      var v = bytes;
+      for (var i = 0; i < units.length; i++) {{
+        if (v < 1024 || i === units.length - 1) return v.toFixed(1) + " " + units[i];
+        v /= 1024;
+      }}
+    }}
+
+    function escHtml(s) {{
+      return String(s)
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }}
+
+    function buildRow(g) {{
+      var filesHtml = "<ul>" + g.files.map(function(f) {{
+        return "<li>" +
+          escHtml(f.relative_path) + " " +
+          "[<em>" + escHtml(f.top_level_folder) + "</em>] " +
+          "(" + escHtml(f.location_policy) + ", " +
+          (f.context_bound ? "context-bound" : "not context-bound") + ", " +
+          fmtSize(f.size_bytes || 0) + ")" +
+          "</li>";
+      }}).join("") + "</ul>";
+      var sha = escHtml((g.sha256 || "").substring(0, 16)) + "…";
+      var tr = document.createElement("tr");
+      tr.setAttribute("data-priority", g.review_priority || "");
+      tr.setAttribute("data-has-context", g.files.some(function(f){{return f.context_bound;}}) ? "1" : "0");
+      tr.setAttribute("data-reclaimable", String(g.potential_reclaimable_bytes || 0));
+      tr.setAttribute("data-paths", g.files.map(function(f){{return (f.relative_path||"").toLowerCase();}}).join("|"));
+      tr.innerHTML =
+        "<td>" + sha + "</td>" +
+        "<td>" + escHtml(g.review_priority || "") + "<br><small>" + escHtml(g.review_priority_reason || "") + "</small></td>" +
+        "<td>" + (g.count || 0) + "</td>" +
+        "<td>" + fmtSize(g.potential_reclaimable_bytes || 0) + "</td>" +
+        "<td>" + fmtSize(g.total_size_bytes || 0) + "</td>" +
+        "<td>" + filesHtml + "</td>" +
+        "<td>" + escHtml(g.status || "") + "</td>";
+      return tr;
+    }}
+
+    var tbody = document.getElementById("dup-tbody");
+    var rows = GROUPS.map(buildRow);
+    rows.forEach(function(r) {{ tbody.appendChild(r); }});
+
+    function applyFilters() {{
+      var pathQ = document.getElementById("path-filter").value.toLowerCase().trim();
+      var prioQ = document.getElementById("priority-filter").value;
+      var cbCtx = document.getElementById("cb-context-bound").checked;
+      var cbRec = document.getElementById("cb-reclaimable").checked;
+      var visible = 0;
+      rows.forEach(function(r) {{
+        var show = true;
+        if (pathQ && r.getAttribute("data-paths").indexOf(pathQ) === -1) show = false;
+        if (prioQ && r.getAttribute("data-priority") !== prioQ) show = false;
+        if (cbCtx && r.getAttribute("data-has-context") !== "1") show = false;
+        if (cbRec && parseInt(r.getAttribute("data-reclaimable"), 10) <= 0) show = false;
+        r.classList.toggle("hidden", !show);
+        if (show) visible++;
+      }});
+      document.getElementById("group-count").textContent = visible;
+    }}
+
+    document.getElementById("path-filter").addEventListener("input", applyFilters);
+    document.getElementById("priority-filter").addEventListener("change", applyFilters);
+    document.getElementById("cb-context-bound").addEventListener("change", applyFilters);
+    document.getElementById("cb-reclaimable").addEventListener("change", applyFilters);
+
+    applyFilters();
+  }})();
+  </script>
 </body>
 </html>
 """

@@ -40,9 +40,11 @@ Tests use synthetic data and temporary directories only. Do not reference `repor
 
 | Mode | Command | What runs |
 |------|---------|-----------|
-| full | `python .\scripts\run_validations.py` | py_compile + unittest discover + validate_reports --help |
-| quick | `python .\scripts\run_validations.py --quick` | py_compile + validate_reports --help (skips unittest) |
+| full | `python .\scripts\run_validations.py` | py_compile + unittest discover + validate_reports --help + synthetic demo |
+| quick | `python .\scripts\run_validations.py --quick` | py_compile + validate_reports --help (skips unittest and demo) |
 | list | `python .\scripts\run_validations.py --list` | prints planned checks, exits 0, no subprocess |
+| quiet | `python .\scripts\run_validations.py --quiet` | any mode; suppresses [RUN]/[OK], keeps summary and errors |
+| no-demo | `python .\scripts\run_validations.py --no-demo` | full mode, skips synthetic demo (useful for debug) |
 
 ```powershell
 # full run
@@ -135,6 +137,17 @@ If the action plan report shows the summary and filters but no duplicate rows, o
 ```powershell
 python scripts/generate_action_plan_report.py --input reports/proposed_actions.json --output reports/action_plan_report.html
 ```
+
+## Percorso consigliato
+
+| Scenario | Comando | Cosa fa |
+|----------|---------|---------|
+| Validazione rapida | `python .\scripts\run_validations.py --quick` | py_compile + validate_reports --help |
+| Demo rapido | `python .\scripts\run_synthetic_demo.py --quick` | inventory → classify → report (dati sintetici) |
+| Demo completo | `python .\scripts\run_synthetic_demo.py` | tutte le 7 fasi della pipeline su dati sintetici |
+| Ispezione manuale | `python .\scripts\run_synthetic_demo.py --keep-temp` | demo completo, stampa temp dir e manifest path, nessuna apertura automatica |
+
+Tutti i comandi usano solo dati sintetici e non toccano file personali o `reports/`. Nessun file viene aperto automaticamente. `demo_manifest.json` è temporaneo e non va committato.
 
 ## Synthetic demo — quickstart
 

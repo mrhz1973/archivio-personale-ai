@@ -20,6 +20,18 @@ The source archive must stay outside the repo (for example `C:\Archivio_Test`).
 - Before implementer switch: verify workspace clean/aligned.
 - Local user environment is Windows: use PowerShell for local commands.
 
+## v1 quickstart
+
+Fastest path to verify the project on synthetic data (no personal files):
+
+```powershell
+python .\scripts\run_validations.py --quick    # 1. essential checks
+python .\scripts\run_synthetic_demo.py --quick # 2. quick pipeline smoke-test on synthetic data
+python .\scripts\run_synthetic_demo.py         # 3. full pipeline on synthetic data
+```
+
+All three commands use only synthetic data and never touch personal files or `reports/`. No file is opened automatically. See `docs/COMMANDS.md` for advanced options.
+
 ## Minimal usage
 
 ```powershell

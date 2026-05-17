@@ -348,5 +348,154 @@ class TestSyntheticDemoIntegration(unittest.TestCase):
         self.assertIn("synthetic demo", buf.getvalue())
 
 
+# ── ARCH-0306..0309: summary output ──────────────────────────────────────────
+
+class TestSummaryOutput(unittest.TestCase):
+
+    def _capture(self, args):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(0)):
+            with redirect_stdout(buf):
+                rc = rv.main(args)
+        return rc, buf.getvalue()
+
+    def test_full_mode_summary_line(self):
+        """ARCH-0307: full mode prints Summary (full):"""
+        rc, out = self._capture([])
+        self.assertEqual(rc, 0)
+        self.assertIn("Summary (full):", out)
+
+    def test_quick_mode_summary_line(self):
+        """ARCH-0308: quick mode prints Summary (quick):"""
+        rc, out = self._capture(["--quick"])
+        self.assertEqual(rc, 0)
+        self.assertIn("Summary (quick):", out)
+
+    def test_summary_shows_failed_count_on_failure(self):
+        """ARCH-0309: failure summary shows failed count."""
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(1)):
+            with redirect_stdout(buf):
+                rc = rv.main([])
+        self.assertEqual(rc, 1)
+        out = buf.getvalue()
+        self.assertIn("failed", out)
+        self.assertIn("Failed:", out)
+
+    def test_summary_shows_ok_count(self):
+        rc, out = self._capture([])
+        self.assertIn(" OK", out)
+
+    def test_summary_shows_skipped_in_quick(self):
+        rc, out = self._capture(["--quick"])
+        self.assertIn("skipped", out)
+
+
+# ── ARCH-0311..0312: --list correctness (already in TestListMode/TestSyntheticDemoIntegration) ──
+
+# No new tests needed; existing tests cover ARCH-0311 and ARCH-0312.
+
+
+# ── ARCH-0315: --quiet flag ───────────────────────────────────────────────────
+
+class TestQuietFlag(unittest.TestCase):
+
+    def _capture(self, args):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(0)):
+            with redirect_stdout(buf):
+                rc = rv.main(args)
+        return rc, buf.getvalue()
+
+    def test_quiet_returns_zero_on_success(self):
+        rc, _ = self._capture(["--quiet"])
+        self.assertEqual(rc, 0)
+
+    def test_quiet_suppresses_run_lines(self):
+        _, out = self._capture(["--quiet"])
+        self.assertNotIn("[RUN]", out)
+
+    def test_quiet_suppresses_ok_lines(self):
+        _, out = self._capture(["--quiet"])
+        self.assertNotIn("[OK]", out)
+
+    def test_quiet_still_prints_summary(self):
+        _, out = self._capture(["--quiet"])
+        self.assertIn("Summary", out)
+
+    def test_quiet_prints_fail_on_failure(self):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(1)):
+            with redirect_stdout(buf):
+                rc = rv.main(["--quiet"])
+        self.assertEqual(rc, 1)
+        self.assertIn("[FAIL]", buf.getvalue())
+
+    def test_quiet_returns_one_on_failure(self):
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(1)):
+            rc = rv.main(["--quiet"])
+        self.assertEqual(rc, 1)
+
+
+# ── ARCH-0318: --no-demo flag ─────────────────────────────────────────────────
+
+class TestNoDemoFlag(unittest.TestCase):
+
+    def test_no_demo_skips_synthetic_demo(self):
+        calls = []
+        def _fake(argv, **kw):
+            calls.append(argv)
+            return _make_result(0)
+        with patch("scripts.run_validations.subprocess.run", side_effect=_fake):
+            rv.main(["--no-demo"])
+        flat = [str(a) for argv in calls for a in argv]
+        self.assertFalse(any("run_synthetic_demo" in c for c in flat),
+                         "--no-demo must skip synthetic demo")
+
+    def test_no_demo_runs_unittest(self):
+        calls = []
+        def _fake(argv, **kw):
+            calls.append(argv)
+            return _make_result(0)
+        with patch("scripts.run_validations.subprocess.run", side_effect=_fake):
+            rv.main(["--no-demo"])
+        flat = [str(a) for argv in calls for a in argv]
+        self.assertTrue(any("unittest" in c for c in flat),
+                        "--no-demo must not skip unittest")
+
+    def test_no_demo_runs_py_compile(self):
+        calls = []
+        def _fake(argv, **kw):
+            calls.append(argv)
+            return _make_result(0)
+        with patch("scripts.run_validations.subprocess.run", side_effect=_fake):
+            rv.main(["--no-demo"])
+        flat = [str(a) for argv in calls for a in argv]
+        self.assertTrue(any("py_compile" in c for c in flat),
+                        "--no-demo must not skip py_compile")
+
+    def test_no_demo_returns_zero_when_others_pass(self):
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(0)):
+            rc = rv.main(["--no-demo"])
+        self.assertEqual(rc, 0)
+
+    def test_no_demo_summary_shows_skipped(self):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(0)):
+            with redirect_stdout(buf):
+                rv.main(["--no-demo"])
+        self.assertIn("skipped", buf.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

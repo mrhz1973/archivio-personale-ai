@@ -12,6 +12,7 @@ from pathlib import Path
 _REPO = Path(__file__).parent.parent
 _LLMS = (_REPO / "LLMS.md").read_text(encoding="utf-8")
 _COMMANDS = (_REPO / "docs" / "COMMANDS.md").read_text(encoding="utf-8")
+_README = (_REPO / "README.md").read_text(encoding="utf-8")
 
 
 # ── ARCH-0130: no forbidden auto-open commands in validation sections ──────────
@@ -150,6 +151,77 @@ class TestCommandsMentionsManifest(unittest.TestCase):
         surrounding = _COMMANDS[max(0, idx - 200):idx + 200]
         self.assertNotIn("Invoke-Item", surrounding)
         self.assertNotRegex(surrounding, r"\bstart\s+\S")
+
+
+# ── ARCH-0320..0323: README.md doc invariants ─────────────────────────────────
+
+class TestReadmeDocInvariants(unittest.TestCase):
+
+    def _code_blocks(self, text):
+        return re.findall(r'```[^\n]*\n(.*?)```', text, re.DOTALL)
+
+    def test_readme_mentions_run_synthetic_demo(self):
+        """ARCH-0320: README.md mentions run_synthetic_demo.py."""
+        self.assertIn("run_synthetic_demo.py", _README)
+
+    def test_readme_mentions_run_validations(self):
+        """ARCH-0321: README.md mentions run_validations.py."""
+        self.assertIn("run_validations.py", _README)
+
+    def test_readme_says_demo_uses_synthetic_data(self):
+        """ARCH-0322: README.md clarifies the demo uses synthetic data."""
+        lower = _README.lower()
+        self.assertTrue(
+            "synthetic" in lower,
+            "README.md must state the demo uses synthetic data"
+        )
+
+    def test_readme_no_invoke_item_in_code_blocks(self):
+        """ARCH-0323: README.md code blocks must not contain Invoke-Item."""
+        for block in self._code_blocks(_README):
+            self.assertNotIn("Invoke-Item", block,
+                             "README.md code block must not use Invoke-Item")
+
+    def test_readme_no_start_open_in_code_blocks(self):
+        """ARCH-0323: README.md code blocks must not use 'start' to open files."""
+        for block in self._code_blocks(_README):
+            self.assertNotRegex(block, r"\bstart\s+\S.*\.(html|json|pdf)",
+                                "README.md code block must not use 'start' to open files")
+
+
+# ── ARCH-0324..0326: COMMANDS.md additional doc invariants ───────────────────
+
+class TestCommandsAdditionalInvariants(unittest.TestCase):
+
+    def test_commands_keep_temp_mentioned_as_manual_inspection(self):
+        """ARCH-0325: COMMANDS.md mentions --keep-temp as manual inspection."""
+        self.assertIn("--keep-temp", _COMMANDS)
+        lower = _COMMANDS.lower()
+        self.assertTrue(
+            "manual inspection" in lower or "ispezione manuale" in lower,
+            "COMMANDS.md must describe --keep-temp as manual inspection"
+        )
+
+    def test_commands_manifest_must_not_be_committed(self):
+        """ARCH-0326: COMMANDS.md states demo_manifest.json must not be committed."""
+        lower = _COMMANDS.lower()
+        self.assertTrue(
+            "must not be committed" in lower or "non va committato" in lower
+            or "not be committed" in lower,
+            "COMMANDS.md must state that demo_manifest.json must not be committed"
+        )
+
+    def test_commands_no_auto_open_in_demo_section(self):
+        """ARCH-0324: COMMANDS.md demo sections do not suggest auto-opening."""
+        match = re.search(
+            r"## Synthetic end-to-end demo\b(.+?)(?=\n## |\Z)", _COMMANDS, re.DOTALL
+        )
+        if match:
+            section = match.group(1)
+            self.assertNotRegex(section, r"Invoke-Item\s+\S",
+                                "demo section must not suggest Invoke-Item as a command")
+            self.assertNotRegex(section, r"\bstart\s+\S.*\.(html|json)",
+                                "demo section must not use 'start' to open files")
 
 
 if __name__ == "__main__":

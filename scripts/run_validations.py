@@ -56,11 +56,13 @@ def _check_compile_targets():
     return [t for t in _COMPILE_TARGETS if not (_REPO / t).exists()]
 
 
-def _run_step(label, argv):
-    print(f"[RUN]  {label}")
+def _run_step(label, argv, quiet=False):
+    if not quiet:
+        print(f"[RUN]  {label}")
     result = subprocess.run(argv, cwd=str(_REPO), capture_output=True, text=True)
     if result.returncode == 0:
-        print(f"[OK]   {label}")
+        if not quiet:
+            print(f"[OK]   {label}")
     else:
         print(f"[FAIL] {label}")
         if result.stdout.strip():
@@ -83,12 +85,22 @@ def main(argv=None):
     parser.add_argument(
         "--quick",
         action="store_true",
-        help="Run only essential checks (skip unittest discover).",
+        help="Run only essential checks (skip unittest discover and synthetic demo).",
     )
     parser.add_argument(
         "--list",
         action="store_true",
         help="List planned checks without running them, then exit 0.",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress [RUN] and [OK] lines; always print summary and errors.",
+    )
+    parser.add_argument(
+        "--no-demo",
+        action="store_true",
+        help="Skip the synthetic demo step in full mode (useful for debug).",
     )
     args = parser.parse_args(argv)
 
@@ -100,6 +112,8 @@ def main(argv=None):
         return 0
 
     failures = []
+    skipped = []
+    ok_count = 0
 
     # Robustness check: verify all compile targets exist before running py_compile
     missing = _check_compile_targets()
@@ -112,18 +126,33 @@ def main(argv=None):
 
     for label, cmd, skip_in_quick in run_steps:
         if args.quick and skip_in_quick:
-            print(f"[SKIP] {label} (--quick)")
+            if not args.quiet:
+                print(f"[SKIP] {label} (--quick)")
+            skipped.append(label)
             continue
-        rc = _run_step(label, cmd)
+        if args.no_demo and label == "synthetic demo":
+            if not args.quiet:
+                print(f"[SKIP] {label} (--no-demo)")
+            skipped.append(label)
+            continue
+        rc = _run_step(label, cmd, quiet=args.quiet)
         if rc != 0:
             failures.append(label)
+        else:
+            ok_count += 1
 
     print()
+    mode_str = "quick" if args.quick else "full"
+    total_run = ok_count + len(failures)
+    parts = [f"{total_run} run", f"{ok_count} OK"]
     if failures:
-        print(f"FAILED ({len(failures)} check(s)): {', '.join(failures)}")
+        parts.append(f"{len(failures)} failed")
+    if skipped:
+        parts.append(f"{len(skipped)} skipped")
+    print(f"Summary ({mode_str}): {', '.join(parts)}")
+    if failures:
+        print(f"Failed: {', '.join(failures)}")
         return 1
-    mode = "quick" if args.quick else "full"
-    print(f"All checks passed ({mode} mode).")
     return 0
 
 

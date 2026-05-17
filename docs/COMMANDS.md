@@ -79,18 +79,20 @@ Never auto-open reports during validation. Do not use `start`, `Invoke-Item`, or
 ## Report validation (structural, no browser)
 
 Validate generated HTML reports structurally without opening them. Does not modify source archive files.
+Exit codes: `0` no errors, `1` validation errors, `2` invalid path or CLI usage.
 
 ```powershell
-python scripts/validate_reports.py
+# default: check reports/inventory_report.html, classification_report.html, action_plan_report.html
+python .\scripts\validate_reports.py
+
+# all *.html in a directory (recursive)
+python .\scripts\validate_reports.py .\reports
+
+# explicit file
+python .\scripts\validate_reports.py .\reports\inventory_report.html
 ```
 
-Optional: pass explicit paths to override defaults.
-
-```powershell
-python scripts/validate_reports.py reports/inventory_report.html reports/classification_report.html reports/action_plan_report.html
-```
-
-Missing report files are skipped with `[SKIP]`. Structural failures are reported with `[FAIL]`.
+Missing default report files are skipped with `[SKIP]`. Results per file: `[OK]`, `[WARN]`, `[FAIL]`.
 
 ## Troubleshooting: blank duplicate table in action report
 

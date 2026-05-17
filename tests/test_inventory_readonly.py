@@ -123,5 +123,107 @@ class TestBuildExtensionsCount(unittest.TestCase):
         self.assertEqual(keys[0], ".pdf")
 
 
+class TestInventoryReadonlyCLI(unittest.TestCase):
+    """ARCH-0401: CLI writes JSON to output path; source files remain untouched."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_cli_writes_json_to_output(self):
+        """ARCH-0401: JSON file is created at the requested output path."""
+        import subprocess
+        src = self.root / "source"
+        src.mkdir()
+        (src / "file1.txt").write_bytes(b"hello")
+        (src / "file2.pdf").write_bytes(b"world")
+        out = self.root / "out" / "inventory.json"
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).parent.parent / "scripts" / "inventory_readonly.py"),
+             "--source", str(src), "--output", str(out)],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, f"stderr: {result.stderr}")
+        self.assertTrue(out.exists(), "JSON output file must be created")
+        with out.open() as f:
+            data = json.load(f)
+        self.assertIn("files", data)
+        self.assertEqual(data["summary"]["total_files"], 2)
+
+    def test_cli_source_files_intact_after_scan(self):
+        """ARCH-0401: source files remain present and unmodified after CLI scan."""
+        import subprocess
+        src = self.root / "source"
+        src.mkdir()
+        f1 = src / "intact.txt"
+        f1.write_bytes(b"original bytes")
+        out = self.root / "inventory.json"
+        subprocess.run(
+            [sys.executable, str(Path(__file__).parent.parent / "scripts" / "inventory_readonly.py"),
+             "--source", str(src), "--output", str(out)],
+            capture_output=True, text=True,
+        )
+        self.assertTrue(f1.exists(), "Source file must still exist after scan")
+        self.assertEqual(f1.read_bytes(), b"original bytes", "Source file must be unmodified")
+
+
+class TestInventoryIgnoresTempFiles(unittest.TestCase):
+    """ARCH-0402: ~$ prefix files are explicitly skipped by should_ignore_file."""
+
+    def test_tilde_dollar_prefix_ignored(self):
+        """ARCH-0402: file starting with ~$ is ignored."""
+        from inventory_readonly import should_ignore_file
+        self.assertTrue(should_ignore_file("~$report.docx"))
+        self.assertTrue(should_ignore_file("~$budget.xlsx"))
+
+    def test_thumbs_db_ignored(self):
+        """ARCH-0402: Thumbs.db is ignored."""
+        from inventory_readonly import should_ignore_file
+        self.assertTrue(should_ignore_file("Thumbs.db"))
+
+    def test_normal_file_not_ignored(self):
+        """ARCH-0402: ordinary files are not ignored."""
+        from inventory_readonly import should_ignore_file
+        self.assertFalse(should_ignore_file("document.pdf"))
+        self.assertFalse(should_ignore_file("photo.jpg"))
+
+
+class TestInventoryHelpWording(unittest.TestCase):
+    """ARCH-0398: --help output contains read-only wording."""
+
+    @classmethod
+    def setUpClass(cls):
+        import io
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).parent.parent / "scripts" / "inventory_readonly.py"),
+             "--help"],
+            capture_output=True, text=True,
+        )
+        cls._help_output = result.stdout + result.stderr
+        cls._exit_code = result.returncode
+
+    def test_help_exits_zero(self):
+        """ARCH-0397: --help exits 0."""
+        self.assertEqual(self._exit_code, 0,
+                         f"--help exited {self._exit_code}; output:\n{self._help_output}")
+
+    def test_help_mentions_read_only(self):
+        """ARCH-0398: help text mentions read-only."""
+        lower = self._help_output.lower()
+        self.assertTrue(
+            "read-only" in lower or "never modif" in lower,
+            "help must mention read-only or never modifies"
+        )
+
+    def test_help_mentions_no_source_modification(self):
+        """ARCH-0398: help text states source is not modified."""
+        lower = self._help_output.lower()
+        self.assertIn("never", lower, "help must include 'never' to describe read-only guarantee")
+
+
 if __name__ == "__main__":
     unittest.main()

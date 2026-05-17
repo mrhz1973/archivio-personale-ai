@@ -78,10 +78,23 @@ def build_extensions_count(files: list) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Read-only file inventory scanner for personal archive."
+        description=(
+            "Read-only file inventory scanner for personal archive. "
+            "Reads the source folder and writes a JSON report to --output. "
+            "Never modifies, moves, renames, or deletes source files."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Safety:\n"
+            "  Source folder is read-only. No source file is modified.\n"
+            "  Only the JSON file at --output is written.\n\n"
+            "Exit codes:\n"
+            "  0  scan completed (errors field may be non-empty)\n"
+            "  1  fatal error (source not found, not a directory)"
+        ),
     )
-    parser.add_argument("--source", required=True, help="Folder to scan (read-only).")
-    parser.add_argument("--output", required=True, help="Output JSON file path.")
+    parser.add_argument("--source", required=True, help="Folder to scan (read-only, never modified).")
+    parser.add_argument("--output", required=True, help="Output JSON file path (only file written).")
     args = parser.parse_args()
 
     source = Path(args.source).resolve()

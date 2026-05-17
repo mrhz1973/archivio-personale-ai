@@ -88,6 +88,8 @@ Exit codes: `0` all checks passed (or `--list`), `1` one or more checks failed.
 
 ## Inventory example
 
+`scripts/inventory_readonly.py` reads the source folder and writes only the JSON file at `--output`. It never modifies, moves, renames, or deletes source files.
+
 ```powershell
 python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output reports/inventory.json
 ```

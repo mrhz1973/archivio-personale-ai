@@ -23,7 +23,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0002 | Local validation of filtered duplicate report | Validation-only — no commit |
 | ARCH-0003 | Document safe report opening command | Closed — commit `5f09dac` |
 | ARCH-0004..ARCH-0013 | Batch 1 — tracking, usability, local workflow cleanup | Closed — commit `f97050f` |
-| ARCH-0014..ARCH-0023 | Batch 2 — Italian HTML reports | Closed — batch commit |
+| ARCH-0014..ARCH-0023 | Batch 2 — Italian HTML reports | Closed — commit `65a14e5` |
 
 ## Current phase
 

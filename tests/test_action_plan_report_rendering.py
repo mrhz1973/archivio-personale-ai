@@ -198,5 +198,102 @@ class TestSafetyWordingPreserved(unittest.TestCase):
             self.assertNotIn(word, self.html.lower())
 
 
+class TestHTMLScriptStructure(unittest.TestCase):
+    """ARCH-0049: Verify required HTML/JS structural elements are present."""
+
+    def setUp(self):
+        self.html = build_html(_DATA_TWO_GROUPS)
+
+    def test_dup_data_script_type(self):
+        self.assertIn('<script type="application/json" id="dup-data">', self.html)
+
+    def test_json_parse_present(self):
+        self.assertIn("JSON.parse", self.html)
+
+    def test_btn_reset_filters_present(self):
+        self.assertIn('id="btn-reset-filters"', self.html)
+
+    def test_dup_empty_state_present(self):
+        self.assertIn('id="dup-empty-state"', self.html)
+
+    def test_dup_tbody_present(self):
+        self.assertIn('id="dup-tbody"', self.html)
+
+
+class TestScriptTagEscaping(unittest.TestCase):
+    """ARCH-0050: Regression — file paths containing </script> must not break the data element."""
+
+    def test_closing_script_tag_escaped(self):
+        data = {
+            "summary": {
+                "source": "C:/Test",
+                "total_files": 2,
+                "root_sort_candidates_count": 0,
+                "duplicate_groups_count": 1,
+                "duplicate_files_count": 2,
+                "keep_in_place_count": 0,
+                "potential_reclaimable_bytes": 0,
+                "duplicate_priority_counts": {},
+            },
+            "root_sort_candidates": [],
+            "duplicate_groups": [
+                {
+                    "sha256": "escapetest12345678",
+                    "count": 2,
+                    "files": [
+                        {"relative_path": "folder</script><script>alert(1)</script>/file.txt"},
+                        {"relative_path": "safe/file.txt"},
+                    ],
+                }
+            ],
+        }
+        result = build_html(data)
+        # The raw closing tag must not appear unescaped inside the data script element.
+        # The generator replaces "</" with "<\/" so the HTML parser won't close prematurely.
+        self.assertNotIn("</script><script>", result)
+        # The escaped form must be present, proving the path data was embedded.
+        self.assertIn("<\\/script>", result)
+
+
+class TestResetFiltersWiring(unittest.TestCase):
+    """ARCH-0051: Verify the reset button listener wires all filter controls."""
+
+    def setUp(self):
+        self.html = build_html(_DATA_TWO_GROUPS)
+
+    def test_reset_button_click_listener(self):
+        self.assertIn('"btn-reset-filters"', self.html)
+        self.assertIn("addEventListener", self.html)
+
+    def test_reset_clears_path_filter(self):
+        self.assertIn('"path-filter"', self.html)
+
+    def test_reset_clears_priority_select(self):
+        self.assertIn('"priority-filter"', self.html)
+
+    def test_reset_unchecks_context_checkbox(self):
+        self.assertIn('"cb-context-bound"', self.html)
+
+    def test_reset_unchecks_reclaimable_checkbox(self):
+        self.assertIn('"cb-reclaimable"', self.html)
+
+    def test_reset_unchecks_cross_folder_checkbox(self):
+        self.assertIn('"cb-cross-folder"', self.html)
+
+    def test_reset_unchecks_same_filename_checkbox(self):
+        self.assertIn('"cb-same-filename"', self.html)
+
+
+class TestItalianEmptyStateWording(unittest.TestCase):
+    """ARCH-0052: Verify exact Italian empty-state message."""
+
+    def test_exact_empty_state_text(self):
+        html = build_html(_DATA_TWO_GROUPS)
+        self.assertIn(
+            "Nessun gruppo duplicato corrisponde ai filtri selezionati.",
+            html,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

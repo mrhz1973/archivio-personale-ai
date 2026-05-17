@@ -79,6 +79,16 @@ git diff --stat
 - Verify commit message format.
 - Verify no personal files were included.
 
+## Troubleshooting: blank duplicate table in action report
+
+If the action plan report shows the summary and filters but no duplicate rows, open the browser Console (F12) for JavaScript errors, then regenerate the report:
+
+```powershell
+python scripts/generate_action_plan_report.py --input reports/proposed_actions.json --output reports/action_plan_report.html
+```
+
+Do not auto-open reports during validation.
+
 ## Validation-only behavior
 
 Validation-only tasks may end without a commit. Correct outcome: no new commit, clean workspace, verified behavior.

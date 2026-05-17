@@ -32,13 +32,17 @@ python scripts/classify_inventory.py --input reports/inventory.json --output rep
 
 This step reads only `inventory.json`. It classifies files from metadata such as relative path, filename, extension, and size. It does not read source file contents and does not move, rename, delete, overwrite, or reorganize files.
 
+Files already inside existing folders are treated as context-bound and marked `keep_in_place`. This preserves project folders where a PDF, spreadsheet, image, note, or other file belongs to the folder context.
+
+Files in the root of the scanned folder are marked `classify_only`; this is a classification suggestion, not a move instruction.
+
 ## Step 5 — Generate the classification HTML report
 
 ```bash
 python scripts/generate_classification_report.py --input reports/classifications.json --output reports/classification_report.html
 ```
 
-Open `reports/classification_report.html` in a browser and review the categories and low-confidence items.
+Open `reports/classification_report.html` in a browser and review the categories, location policies, and low-confidence items.
 
 ---
 
@@ -50,7 +54,7 @@ A future AI model may improve classification quality, but personal file contents
 
 ### Proposed moves
 
-A future `proposed_moves.json` may describe suggested moves for manual review. It must not execute moves.
+A future `proposed_moves.json` may describe suggested moves for manual review. It must not execute moves. Existing project/context folders must remain protected unless the user explicitly overrides that rule.
 
 ### Optional controlled move
 

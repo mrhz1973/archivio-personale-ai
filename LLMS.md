@@ -51,6 +51,7 @@ Rules:
 - Prefer reports, review lists, and clear questions over autonomous actions.
 - Default posture is `review_only` / ask before acting.
 - Any future Google Drive support must treat Drive as a local folder first, not as an API automation target.
+- Do not build autonomous agents, MCP pipelines, or multi-step orchestration that operates on personal files without human review at each step.
 
 ## External tools under evaluation
 

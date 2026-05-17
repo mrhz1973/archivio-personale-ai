@@ -11,6 +11,8 @@ These rules apply to all phases of this project. They must never be relaxed with
 - **No overwrite** — source files are never overwritten.
 - **No writing inside the source archive by default** — all outputs go to a user-specified external path.
 - **No real personal files committed to Git** — the repository contains only code, documentation, tests, and example placeholder files.
+- **No external AI API calls for personal file contents** — file paths, names, and contents must not be sent to external APIs or cloud services without explicit user approval.
+- **No cloud storage API automation by default** — Google Drive and similar services may only be accessed as local synced/mirrored folders, not via remote API calls, unless explicitly approved.
 
 ## Future move phase — conditions required
 

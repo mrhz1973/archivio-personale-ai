@@ -56,18 +56,26 @@ def build_html(data: dict) -> str:
             "</tr>\n"
         )
 
+    shown_groups = duplicate_groups[:100]
+    hidden_groups = max(0, len(duplicate_groups) - len(shown_groups))
     duplicate_rows = ""
-    for group in duplicate_groups[:100]:
+    for group in shown_groups:
         files_html = "<ul>" + "".join(
-            f"<li>{html.escape(str(file.get('relative_path', '')))} "
-            f"[{html.escape(str(file.get('top_level_folder', '')))}] "
-            f"({html.escape(str(file.get('location_policy', '')))}, {fmt_size(int(file.get('size_bytes', 0) or 0))})</li>"
+            "<li>"
+            f"{html.escape(str(file.get('relative_path', '')))} "
+            f"[<em>{html.escape(str(file.get('top_level_folder', '')))}</em>] "
+            f"({html.escape(str(file.get('location_policy', '')))},"
+            f" {'context-bound' if file.get('context_bound') else 'not context-bound'},"
+            f" {fmt_size(int(file.get('size_bytes', 0) or 0))})"
+            "</li>"
             for file in group.get("files", [])
         ) + "</ul>"
+        priority_reason = html.escape(str(group.get("review_priority_reason", "")))
         duplicate_rows += (
             "<tr>"
             f"<td>{html.escape(str(group.get('sha256', ''))[:16])}…</td>"
-            f"<td>{html.escape(str(group.get('review_priority', '')))}</td>"
+            f"<td>{html.escape(str(group.get('review_priority', '')))}"
+            f"<br><small>{priority_reason}</small></td>"
             f"<td>{int(group.get('count', 0) or 0)}</td>"
             f"<td>{fmt_size(int(group.get('potential_reclaimable_bytes', 0) or 0))}</td>"
             f"<td>{fmt_size(int(group.get('total_size_bytes', 0) or 0))}</td>"
@@ -101,12 +109,19 @@ def build_html(data: dict) -> str:
         else ""
     )
 
+    hidden_note = (
+        f"<p><em>Showing first {len(shown_groups)} of {duplicate_groups_count} groups. "
+        f"{hidden_groups} groups not shown — run with all data to see the full list.</em></p>"
+        if hidden_groups > 0
+        else ""
+    )
     duplicate_section = (
         f"""
-        <h2>Exact Duplicate Groups (first 100, sorted by potential reclaimable size)</h2>
-        <p>Exact duplicate candidates are based on identical SHA-256 hashes. Potential reclaimable size is theoretical and assumes keeping one copy; it is not a delete instruction.</p>
+        <h2>Exact Duplicate Groups (sorted by potential reclaimable size)</h2>
+        <p>Exact duplicate candidates are based on identical SHA-256 hashes. <strong>Potential reclaimable size is theoretical</strong> and assumes keeping one copy per group; it is not a delete instruction. No deletion is proposed. Context-bound files (inside project folders) should be treated with extra caution.</p>
+        {hidden_note}
         <table>
-          <thead><tr><th>SHA-256</th><th>Review Priority</th><th>Count</th><th>Potential Reclaimable</th><th>Total Size</th><th>Files</th><th>Status</th></tr></thead>
+          <thead><tr><th>SHA-256</th><th>Review Priority / Reason</th><th>Count</th><th>Potential Reclaimable</th><th>Total Size</th><th>Files</th><th>Status</th></tr></thead>
           <tbody>{duplicate_rows}</tbody>
         </table>
         """

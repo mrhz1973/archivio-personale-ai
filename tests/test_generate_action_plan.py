@@ -110,6 +110,54 @@ class TestActionPlan(unittest.TestCase):
         self.assertEqual(plan["summary"]["keep_in_place_count"], 1)
         self.assertTrue(plan["summary"]["dry_run_only"])
 
+    def test_potential_reclaimable_bytes_calculated(self):
+        inventory = {
+            "a/file.pdf": {"relative_path": "a/file.pdf", "size_bytes": 500, "sha256": "dup"},
+            "b/file.pdf": {"relative_path": "b/file.pdf", "size_bytes": 500, "sha256": "dup"},
+            "c/file.pdf": {"relative_path": "c/file.pdf", "size_bytes": 500, "sha256": "dup"},
+        }
+        classifications = {
+            "a/file.pdf": {"category": "Documents", "location_policy": "keep_in_place", "context_bound": True},
+            "b/file.pdf": {"category": "Documents", "location_policy": "keep_in_place", "context_bound": True},
+            "c/file.pdf": {"category": "Documents", "location_policy": "keep_in_place", "context_bound": True},
+        }
+        result = build_duplicate_groups(inventory, classifications)
+        self.assertEqual(len(result), 1)
+        group = result[0]
+        # 3 copies × 500 B each; keeping one means 1000 B is theoretically reclaimable
+        self.assertEqual(group["potential_reclaimable_bytes"], 1000)
+
+    def test_review_priority_field_exists(self):
+        inventory = {
+            "a/x.txt": {"relative_path": "a/x.txt", "size_bytes": 10, "sha256": "abc"},
+            "b/x.txt": {"relative_path": "b/x.txt", "size_bytes": 10, "sha256": "abc"},
+        }
+        classifications = {
+            "a/x.txt": {"category": "Documents", "location_policy": "keep_in_place", "context_bound": False},
+            "b/x.txt": {"category": "Documents", "location_policy": "keep_in_place", "context_bound": False},
+        }
+        result = build_duplicate_groups(inventory, classifications)
+        self.assertEqual(len(result), 1)
+        group = result[0]
+        self.assertIn("review_priority", group)
+        self.assertIn("review_priority_reason", group)
+        self.assertIsInstance(group["review_priority"], str)
+        self.assertTrue(len(group["review_priority"]) > 0)
+
+    def test_context_bound_cross_folder_gets_low_risk_priority(self):
+        # All context-bound, different top-level folders → low_context_risk_review
+        inventory = {
+            "Alpha/report.pdf": {"relative_path": "Alpha/report.pdf", "size_bytes": 100, "sha256": "xyz"},
+            "Beta/report.pdf": {"relative_path": "Beta/report.pdf", "size_bytes": 100, "sha256": "xyz"},
+        }
+        classifications = {
+            "Alpha/report.pdf": {"category": "Documents", "location_policy": "keep_in_place", "context_bound": True},
+            "Beta/report.pdf": {"category": "Documents", "location_policy": "keep_in_place", "context_bound": True},
+        }
+        result = build_duplicate_groups(inventory, classifications)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["review_priority"], "low_context_risk_review")
+
     def test_no_destructive_action_fields(self):
         inventory_data = {
             "summary": {},

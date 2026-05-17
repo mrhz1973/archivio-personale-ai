@@ -23,6 +23,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0004..ARCH-0013 | Batch 1 — tracking, usability, local workflow cleanup | Closed — commit `f97050f` |
 | ARCH-0014..ARCH-0023 | Batch 2 — Italian HTML reports | Closed — commit `65a14e5` |
 | ARCH-0024..ARCH-0033 | Batch 3 — operational guardrails | Closed — commit `23f59ae` |
+| ARCH-0034..ARCH-0044 | Batch 4 — action report rendering and orchestration rules | Closed — commit pending |
 
 ## Current phase
 
@@ -108,6 +109,36 @@ Rules:
 - Safety rules: `docs/SAFETY_RULES.md`.
 - Workflow: `docs/WORKFLOW.md`.
 - Commands: `docs/COMMANDS.md`.
+
+## No-confirmation-next-task rule
+
+If no real decision gate, safety check, or explicit user confirmation is needed, proceed directly to the next operational step without asking for confirmation.
+
+Real gates (must stop and ask): move/rename/delete on personal files, cloud/API use, dependency installs, secrets, implementer switch, dirty/misaligned workspace, merge/push to remote.
+
+Non-gates (proceed directly): documentation updates, test additions, code fixes, validation runs, commits of authorized files.
+
+## Documentation preservation rule
+
+When updating existing documents, preserve all useful operational content already present: usage examples, safety conditions, workflow steps, notes on future phases, and operational sections.
+
+Do not remove or overwrite existing content unless explicitly requested. Prefer targeted edits over broad rewrites. If a section appears duplicated, note it in the task summary instead of deleting it.
+
+## Claude Code settings checklist (orchestrator)
+
+Before giving an operational prompt to Claude Code, ChatGPT orchestrator should state, when relevant:
+
+- Active implementer: Claude Code; Codex stopped.
+- Mode: Code (modifying files) or Plan (analysis/planning only, no edits).
+- Claude model selected, if visible in the interface.
+- Effort / thinking / reasoning level, if visible.
+- Expected branch and repo state (branch name, HEAD commit).
+- Workspace: clean/aligned or verify first.
+- Authorized files and forbidden files for the task.
+- Whether the task requires a commit or is validation-only.
+- Whether real gates exist.
+
+If a setting is not visible or not controllable, do not invent it — declare only what is actually known. If the task is implementation, prefer Code mode. If the task is analysis or audit without changes, prefer Plan mode.
 
 ## Documentation policy
 

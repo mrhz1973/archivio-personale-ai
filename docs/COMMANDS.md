@@ -76,6 +76,14 @@ Invoke-Item ./reports/action_plan_report.html
 
 Never auto-open reports during validation. Do not use `start`, `Invoke-Item`, or equivalents unless the user explicitly asks.
 
+## Troubleshooting: blank duplicate table in action report
+
+If the action plan report shows the summary and filters but no duplicate rows, open the browser Console (F12) for JavaScript errors, then regenerate the report:
+
+```powershell
+python scripts/generate_action_plan_report.py --input reports/proposed_actions.json --output reports/action_plan_report.html
+```
+
 ## Implementer post-task verification
 
 ```powershell

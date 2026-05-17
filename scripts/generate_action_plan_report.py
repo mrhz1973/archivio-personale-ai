@@ -96,8 +96,10 @@ def build_html(data: dict) -> str:
         else ""
     )
 
-    # Embed all duplicate groups as JSON for client-side filtering.
-    groups_json = json.dumps(duplicate_groups, ensure_ascii=False)
+    # Embed duplicate groups as JSON in a non-executable script element.
+    # Replacing "</" with "<\/" prevents the HTML parser from closing the element prematurely.
+    _groups_raw = json.dumps(duplicate_groups, ensure_ascii=False)
+    groups_json_str = _groups_raw.replace("</", "<\\/")
 
     known_priorities = sorted({
         str(g.get("review_priority", "")) for g in duplicate_groups if g.get("review_priority")
@@ -129,8 +131,10 @@ def build_html(data: dict) -> str:
     .filters label {{ font-size: 0.9em; }}
     .filters input[type=text] {{ padding: 4px 8px; border: 1px solid #bbb; border-radius: 3px; width: 260px; }}
     .filters select {{ padding: 4px 8px; border: 1px solid #bbb; border-radius: 3px; }}
+    .filters button {{ padding: 4px 10px; border: 1px solid #bbb; border-radius: 3px; background: #fff; cursor: pointer; font-size: 0.9em; }}
     #group-count {{ font-weight: bold; color: #2255aa; }}
     #dup-tbody tr.hidden {{ display: none; }}
+    #dup-empty-state {{ color: #888; font-style: italic; margin-top: 0.5em; display: none; }}
   </style>
 </head>
 <body>
@@ -201,6 +205,7 @@ def build_html(data: dict) -> str:
       <input type="checkbox" id="cb-same-filename">
       mostra solo gruppi dove tutti i file hanno lo stesso nome
     </label>
+    <button id="btn-reset-filters" type="button">Azzera filtri</button>
     <span>Visualizzati <span id="group-count">…</span> di {duplicate_groups_count} gruppi
       &nbsp;|&nbsp; Spazio teorico recuperabile (filtrato): <span id="filtered-reclaimable">…</span>
     </span>
@@ -220,10 +225,12 @@ def build_html(data: dict) -> str:
     </thead>
     <tbody id="dup-tbody"></tbody>
   </table>
+  <p id="dup-empty-state">Nessun gruppo duplicato corrisponde ai filtri selezionati.</p>
 
+  <script type="application/json" id="dup-data">{groups_json_str}</script>
   <script>
   (function () {{
-    var GROUPS = {groups_json};
+    var GROUPS = JSON.parse(document.getElementById('dup-data').textContent);
 
     var PRIORITY_LABELS = {{
       "review_only": "solo revisione",
@@ -240,8 +247,8 @@ def build_html(data: dict) -> str:
     }}
 
     function fmtSize(bytes) {{
+      var v = Number(bytes) || 0;
       var units = ["B","KB","MB","GB","TB"];
-      var v = bytes;
       for (var i = 0; i < units.length; i++) {{
         if (v < 1024 || i === units.length - 1) return v.toFixed(1) + " " + units[i];
         v /= 1024;
@@ -255,28 +262,31 @@ def build_html(data: dict) -> str:
     }}
 
     function buildRow(g) {{
-      var filesHtml = "<ul>" + g.files.map(function(f) {{
+      var files = g.files || [];
+      var filesHtml = "<ul>" + files.map(function(f) {{
+        var folder = f.top_level_folder;
+        var folderHtml = folder ? "[<em>" + escHtml(folder) + "</em>] " : "";
         return "<li>" +
-          escHtml(f.relative_path) + " " +
-          "[<em>" + escHtml(f.top_level_folder) + "</em>] " +
-          "(" + priorityLabel(escHtml(f.location_policy)) + ", " +
+          escHtml(f.relative_path || "") + " " +
+          folderHtml +
+          "(" + priorityLabel(escHtml(f.location_policy || "")) + ", " +
           (f.context_bound ? "dentro cartella/progetto" : "non in cartella/progetto") + ", " +
           fmtSize(f.size_bytes || 0) + ")" +
           "</li>";
       }}).join("") + "</ul>";
       var sha = escHtml((g.sha256 || "").substring(0, 16)) + "…";
       var tr = document.createElement("tr");
-      var topFolders = g.files.map(function(f){{return f.top_level_folder||"";}});
+      var topFolders = files.map(function(f){{return f.top_level_folder||"";}});
       var uniqueFolders = topFolders.filter(function(v,i){{return topFolders.indexOf(v)===i;}});
-      var basenames = g.files.map(function(f){{
+      var basenames = files.map(function(f){{
         var p = (f.relative_path||"").replace(/\\/g,"/");
         return p.split("/").pop().toLowerCase();
       }});
       var sameFilename = basenames.length > 0 && basenames.every(function(b){{return b===basenames[0];}});
       tr.setAttribute("data-priority", g.review_priority || "");
-      tr.setAttribute("data-has-context", g.files.some(function(f){{return f.context_bound;}}) ? "1" : "0");
+      tr.setAttribute("data-has-context", files.some(function(f){{return f.context_bound;}}) ? "1" : "0");
       tr.setAttribute("data-reclaimable", String(g.potential_reclaimable_bytes || 0));
-      tr.setAttribute("data-paths", g.files.map(function(f){{return (f.relative_path||"").toLowerCase();}}).join("|"));
+      tr.setAttribute("data-paths", files.map(function(f){{return (f.relative_path||"").toLowerCase();}}).join("|"));
       tr.setAttribute("data-cross-folder", uniqueFolders.length > 1 ? "1" : "0");
       tr.setAttribute("data-same-filename", sameFilename ? "1" : "0");
       tr.innerHTML =
@@ -291,6 +301,7 @@ def build_html(data: dict) -> str:
     }}
 
     var tbody = document.getElementById("dup-tbody");
+    var emptyState = document.getElementById("dup-empty-state");
     var rows = GROUPS.map(buildRow);
     rows.forEach(function(r) {{ tbody.appendChild(r); }});
 
@@ -319,6 +330,7 @@ def build_html(data: dict) -> str:
       }});
       document.getElementById("group-count").textContent = visible;
       document.getElementById("filtered-reclaimable").textContent = fmtSize(filteredReclaimable);
+      emptyState.style.display = visible === 0 ? "" : "none";
     }}
 
     document.getElementById("path-filter").addEventListener("input", applyFilters);
@@ -327,6 +339,15 @@ def build_html(data: dict) -> str:
     document.getElementById("cb-reclaimable").addEventListener("change", applyFilters);
     document.getElementById("cb-cross-folder").addEventListener("change", applyFilters);
     document.getElementById("cb-same-filename").addEventListener("change", applyFilters);
+    document.getElementById("btn-reset-filters").addEventListener("click", function() {{
+      document.getElementById("path-filter").value = "";
+      document.getElementById("priority-filter").value = "";
+      document.getElementById("cb-context-bound").checked = false;
+      document.getElementById("cb-reclaimable").checked = false;
+      document.getElementById("cb-cross-folder").checked = false;
+      document.getElementById("cb-same-filename").checked = false;
+      applyFilters();
+    }});
 
     applyFilters();
   }})();

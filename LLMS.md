@@ -34,7 +34,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0115..ARCH-0124 | Batch 12 — test hygiene and safety assertions | Closed — commit `0bd1304` |
 | ARCH-0125..ARCH-0134 | Batch 13 — docs smoke alignment and tracking fix | Closed — commit `f363aeb` |
 | ARCH-0135..ARCH-0144 | Batch 14 — local validation runner | Closed — commit `9f9a52a` |
-| ARCH-0145..ARCH-0164 | Batch 15 — validation runner polish and invariants | Closed — commit pending |
+| ARCH-0145..ARCH-0164 | Batch 15 — validation runner polish and invariants | Closed — commit `9a6b237` |
 
 ## Current phase
 

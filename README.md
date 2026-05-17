@@ -4,7 +4,7 @@ A safe, dry-run inventory and classification system for a personal home file arc
 
 ## Current phase — Dry-run inventory and rule-based classification
 
-**Status:** local-first, review-only. The duplicate report has path, priority, context-bound, reclaimable, cross-folder, and same-filename filters. No automatic move, rename, or delete is proposed or implemented.
+**Status:** local-first, review-only. Report HTML in italiano. The duplicate report has path, priority, context-bound, reclaimable, cross-folder, and same-filename filters. No automatic move, rename, or delete is proposed or implemented.
 
 The current phase is strictly read-only and dry-run only.
 

@@ -47,6 +47,8 @@ python scripts/generate_action_plan_report.py --input reports/proposed_actions.j
 
 ## Open generated HTML reports on Windows
 
+I report HTML generati sono in italiano.
+
 Use `.\reports\...` to avoid malformed paths such as `reportsaction_plan_report.html`.
 
 ```powershell
@@ -55,7 +57,7 @@ Invoke-Item .\reports\classification_report.html
 Invoke-Item .\reports\action_plan_report.html
 ```
 
-Implementers should not auto-open reports with `start` or `Invoke-Item` during validation unless explicitly requested by the user. Prefer generating the report and confirming that the file exists.
+Non auto-aprire i report durante la validazione. Usare `Invoke-Item .\reports\...` solo quando richiesto dall'utente. Preferire la generazione del report e la conferma che il file esiste.
 
 ## Commit message format
 

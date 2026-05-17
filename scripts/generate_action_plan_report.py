@@ -21,6 +21,21 @@ def fmt_size(size_bytes: int) -> str:
     return f"{value:.1f} PB"
 
 
+_PRIORITY_LABELS = {
+    "review_only": "solo revisione",
+    "higher_review_value": "priorità alta di revisione",
+    "medium_review": "priorità media",
+    "low_context_risk_review": "rischio contesto basso / verifica prudente",
+    "manual_review": "revisione manuale",
+    "keep_in_place": "mantieni nella posizione attuale",
+    "classify_only": "solo classificazione",
+}
+
+
+def _priority_label(value: str) -> str:
+    return _PRIORITY_LABELS.get(value, value)
+
+
 def build_html(data: dict) -> str:
     summary = data.get("summary", {})
     root_sort_candidates = data.get("root_sort_candidates", [])
@@ -58,22 +73,22 @@ def build_html(data: dict) -> str:
 
     sort_section = (
         f"""
-        <h2>Root Sort Candidates (first 200)</h2>
-        <p>These are root-level files only. They are candidates for manual review, not move instructions.</p>
+        <h2>Candidati ordinamento radice (primi 200)</h2>
+        <p>Solo file nella cartella radice. Sono candidati per revisione manuale, non istruzioni di spostamento.</p>
         <table>
-          <thead><tr><th>Path</th><th>Category</th><th>Confidence</th><th>Proposed Destination</th><th>Status</th></tr></thead>
+          <thead><tr><th>Percorso</th><th>Categoria</th><th>Confidenza</th><th>Destinazione proposta</th><th>Stato</th></tr></thead>
           <tbody>{sort_rows}</tbody>
         </table>
         """
         if sort_rows
-        else "<h2>Root Sort Candidates</h2><p>No root-level sortable candidates found.</p>"
+        else "<h2>Candidati ordinamento radice</h2><p>Nessun candidato trovato nella radice.</p>"
     )
 
     priority_section = (
         f"""
-        <h2>Duplicate Review Priority Counts</h2>
+        <h2>Conteggio priorità revisione duplicati</h2>
         <table>
-          <thead><tr><th>Priority</th><th>Groups</th></tr></thead>
+          <thead><tr><th>Priorità</th><th>Gruppi</th></tr></thead>
           <tbody>{priority_rows}</tbody>
         </table>
         """
@@ -93,10 +108,10 @@ def build_html(data: dict) -> str:
     )
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Archivio Personale AI — Proposed Actions Report</title>
+  <title>Archivio Personale AI — Report Azioni Proposte</title>
   <style>
     body {{ font-family: sans-serif; margin: 2em; color: #222; }}
     h1 {{ color: #333; }}
@@ -119,76 +134,75 @@ def build_html(data: dict) -> str:
   </style>
 </head>
 <body>
-  <h1>Archivio Personale AI — Proposed Actions Report</h1>
-  <p><strong>Source:</strong> {source}</p>
+  <h1>Archivio Personale AI — Report Azioni Proposte</h1>
+  <p><strong>Origine:</strong> {source}</p>
   <p class="warning">
-    <strong>Review only:</strong> this report asks what could be done. It does not move, rename,
-    delete, overwrite, or reorganize any file. Files already inside folders remain protected by
-    the keep_in_place policy.<br>
-    <strong>Potential reclaimable size is theoretical</strong> — it assumes keeping one copy per
-    group and is not a delete instruction. No deletion is proposed.<br>
-    <strong>Context-bound files</strong> (inside project or work folders) require extra caution
-    before any future manual action.
+    <strong>Solo revisione:</strong> questo report illustra cosa potrebbe essere fatto. Non sposta, rinomina,
+    cancella, sovrascrive o riorganizza alcun file. I file già dentro cartelle rimangono protetti
+    dalla politica keep_in_place.<br>
+    <strong>Lo spazio recuperabile è solo teorico</strong> — assume di mantenere una copia per gruppo
+    e non è un'istruzione di cancellazione. Nessuna cancellazione è proposta.<br>
+    <strong>File dentro cartelle/progetti</strong> richiedono cautela extra prima di qualsiasi azione manuale futura.
   </p>
 
-  <h2>Summary</h2>
+  <h2>Riepilogo</h2>
   <div>
-    <div class="stat">Total files<span>{total_files}</span></div>
-    <div class="stat">Keep in place<span>{keep_in_place_count}</span></div>
-    <div class="stat">Root candidates<span>{root_sort_count}</span></div>
-    <div class="stat">Duplicate groups<span>{duplicate_groups_count}</span></div>
-    <div class="stat">Duplicate files<span>{duplicate_files_count}</span></div>
-    <div class="stat">Potential reclaimable<span>{fmt_size(potential_reclaimable)}</span></div>
+    <div class="stat">File totali<span>{total_files}</span></div>
+    <div class="stat">Mantieni nella posizione attuale<span>{keep_in_place_count}</span></div>
+    <div class="stat">Candidati radice<span>{root_sort_count}</span></div>
+    <div class="stat">Gruppi duplicati<span>{duplicate_groups_count}</span></div>
+    <div class="stat">File duplicati<span>{duplicate_files_count}</span></div>
+    <div class="stat">Spazio teorico recuperabile<span>{fmt_size(potential_reclaimable)}</span></div>
   </div>
 
   {sort_section}
   {priority_section}
 
-  <h2>Exact Duplicate Groups (sorted by potential reclaimable size)</h2>
-  <p>Exact duplicate candidates are based on identical SHA-256 hashes. All {duplicate_groups_count} groups are loaded; use the filters below to narrow the list.</p>
+  <h2>Gruppi duplicati esatti (ordinati per spazio teorico recuperabile)</h2>
+  <p>I duplicati esatti si basano su hash SHA-256 identici. Tutti i {duplicate_groups_count} gruppi sono caricati; usa i filtri per restringere la lista.</p>
 
   <details style="margin-bottom:1em;padding:0.8em 1em;background:#eef4ff;border:1px solid #b3cce8;border-radius:4px;">
-    <summary style="cursor:pointer;font-weight:bold;">How to use this report</summary>
+    <summary style="cursor:pointer;font-weight:bold;">Come usare questo report</summary>
     <ul style="margin:0.5em 0 0 1em;font-size:0.9em;">
-      <li><strong>Search paths</strong> — type any part of a folder or file path to filter groups.</li>
-      <li><strong>Priority</strong> — filter by review priority assigned to each duplicate group.</li>
-      <li><strong>Context-bound</strong> — a file is context-bound when it lives inside an existing project or work folder; extra caution is needed before any future manual action.</li>
-      <li><strong>Cross-folder</strong> — groups where duplicate copies span more than one top-level folder.</li>
-      <li><strong>Same filename</strong> — groups where every duplicate file has the same filename.</li>
-      <li><strong>Potential reclaimable</strong> is theoretical: it assumes keeping exactly one copy per group. It is not a delete instruction. No deletion is proposed.</li>
+      <li><strong>Cerca nei percorsi</strong> — digita parte di un percorso per filtrare i gruppi.</li>
+      <li><strong>Priorità</strong> — filtra per priorità di revisione assegnata a ciascun gruppo.</li>
+      <li><strong>File dentro cartelle/progetti</strong> — un file è dentro un progetto quando si trova in una cartella esistente; serve cautela extra prima di qualsiasi azione manuale futura.</li>
+      <li><strong>Cross-folder</strong> — gruppi in cui le copie duplicate si trovano in più cartelle principali.</li>
+      <li><strong>Stesso nome file</strong> — gruppi in cui tutti i file duplicati hanno lo stesso nome.</li>
+      <li><strong>Spazio recuperabile</strong> è teorico: assume di tenere esattamente una copia per gruppo. Non è un'istruzione di cancellazione. Nessuna cancellazione è proposta.</li>
     </ul>
   </details>
 
   <div class="filters">
     <label>
-      Search paths:&nbsp;
-      <input type="text" id="path-filter" placeholder="type to filter by file path…">
+      Cerca nei percorsi:&nbsp;
+      <input type="text" id="path-filter" placeholder="digita per filtrare per percorso…">
     </label>
     <label>
-      Priority:&nbsp;
+      Priorità:&nbsp;
       <select id="priority-filter">
-        <option value="">all</option>
+        <option value="">tutti</option>
         {priority_options}
       </select>
     </label>
     <label>
       <input type="checkbox" id="cb-context-bound">
-      show only groups with context-bound files
+      mostra solo gruppi con file dentro cartelle/progetti
     </label>
     <label>
       <input type="checkbox" id="cb-reclaimable">
-      show only groups with potential reclaimable &gt; 0
+      mostra solo gruppi con spazio teorico recuperabile &gt; 0
     </label>
     <label>
       <input type="checkbox" id="cb-cross-folder">
-      show only groups spanning multiple top-level folders
+      mostra solo gruppi presenti in più cartelle principali
     </label>
     <label>
       <input type="checkbox" id="cb-same-filename">
-      show only groups where all files have the same filename
+      mostra solo gruppi dove tutti i file hanno lo stesso nome
     </label>
-    <span>Showing <span id="group-count">…</span> of {duplicate_groups_count} groups
-      &nbsp;|&nbsp; Filtered potential reclaimable (theoretical): <span id="filtered-reclaimable">…</span>
+    <span>Visualizzati <span id="group-count">…</span> di {duplicate_groups_count} gruppi
+      &nbsp;|&nbsp; Spazio teorico recuperabile (filtrato): <span id="filtered-reclaimable">…</span>
     </span>
   </div>
 
@@ -196,12 +210,12 @@ def build_html(data: dict) -> str:
     <thead>
       <tr>
         <th>SHA-256</th>
-        <th>Review Priority / Reason</th>
-        <th>Count</th>
-        <th>Potential Reclaimable</th>
-        <th>Total Size</th>
-        <th>Files</th>
-        <th>Status</th>
+        <th>Priorità revisione / Motivo</th>
+        <th>Conteggio</th>
+        <th>Spazio teorico recuperabile</th>
+        <th>Dimensione totale</th>
+        <th>File</th>
+        <th>Stato</th>
       </tr>
     </thead>
     <tbody id="dup-tbody"></tbody>
@@ -210,6 +224,20 @@ def build_html(data: dict) -> str:
   <script>
   (function () {{
     var GROUPS = {groups_json};
+
+    var PRIORITY_LABELS = {{
+      "review_only": "solo revisione",
+      "higher_review_value": "priorità alta di revisione",
+      "medium_review": "priorità media",
+      "low_context_risk_review": "rischio contesto basso / verifica prudente",
+      "manual_review": "revisione manuale",
+      "keep_in_place": "mantieni nella posizione attuale",
+      "classify_only": "solo classificazione"
+    }};
+
+    function priorityLabel(v) {{
+      return PRIORITY_LABELS[v] || v;
+    }}
 
     function fmtSize(bytes) {{
       var units = ["B","KB","MB","GB","TB"];
@@ -231,8 +259,8 @@ def build_html(data: dict) -> str:
         return "<li>" +
           escHtml(f.relative_path) + " " +
           "[<em>" + escHtml(f.top_level_folder) + "</em>] " +
-          "(" + escHtml(f.location_policy) + ", " +
-          (f.context_bound ? "context-bound" : "not context-bound") + ", " +
+          "(" + priorityLabel(escHtml(f.location_policy)) + ", " +
+          (f.context_bound ? "dentro cartella/progetto" : "non in cartella/progetto") + ", " +
           fmtSize(f.size_bytes || 0) + ")" +
           "</li>";
       }}).join("") + "</ul>";
@@ -253,12 +281,12 @@ def build_html(data: dict) -> str:
       tr.setAttribute("data-same-filename", sameFilename ? "1" : "0");
       tr.innerHTML =
         "<td>" + sha + "</td>" +
-        "<td>" + escHtml(g.review_priority || "") + "<br><small>" + escHtml(g.review_priority_reason || "") + "</small></td>" +
+        "<td>" + priorityLabel(escHtml(g.review_priority || "")) + "<br><small>" + escHtml(g.review_priority_reason || "") + "</small></td>" +
         "<td>" + (g.count || 0) + "</td>" +
         "<td>" + fmtSize(g.potential_reclaimable_bytes || 0) + "</td>" +
         "<td>" + fmtSize(g.total_size_bytes || 0) + "</td>" +
         "<td>" + filesHtml + "</td>" +
-        "<td>" + escHtml(g.status || "") + "</td>";
+        "<td>" + priorityLabel(escHtml(g.status || "")) + "</td>";
       return tr;
     }}
 

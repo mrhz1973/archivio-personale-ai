@@ -68,7 +68,7 @@ def build_html(data: dict) -> str:
     for item in classifications[:100]:
         suggested_folder = item.get("suggested_folder")
         if suggested_folder is None:
-            suggested_folder = "(keep current folder)"
+            suggested_folder = "(mantieni nella cartella attuale)"
         sample_rows += (
             "<tr>"
             f"<td>{html.escape(str(item.get('relative_path', '')))}</td>"
@@ -84,18 +84,18 @@ def build_html(data: dict) -> str:
     low_section = ""
     if low_rows:
         low_section = f"""
-        <h2>Low Confidence Items (first 50)</h2>
+        <h2>Elementi con bassa confidenza (primi 50)</h2>
         <table>
-          <thead><tr><th>Path</th><th>Category</th><th>Location Policy</th><th>Confidence</th><th>Signals</th></tr></thead>
+          <thead><tr><th>Percorso</th><th>Categoria</th><th>Politica posizione</th><th>Confidenza</th><th>Segnali</th></tr></thead>
           <tbody>{low_rows}</tbody>
         </table>
         """
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Archivio Personale AI — Classification Report</title>
+  <title>Archivio Personale AI — Report Classificazione</title>
   <style>
     body {{ font-family: sans-serif; margin: 2em; color: #222; }}
     h1 {{ color: #333; }}
@@ -110,35 +110,35 @@ def build_html(data: dict) -> str:
   </style>
 </head>
 <body>
-  <h1>Archivio Personale AI — Classification Report</h1>
-  <p><strong>Source:</strong> {source}</p>
-  <p class="warning"><strong>Dry-run only:</strong> this report contains suggestions only. No files were moved, renamed, deleted, overwritten, or reorganized. Files already inside existing folders are marked <strong>keep_in_place</strong> to preserve project/context folders.</p>
+  <h1>Archivio Personale AI — Report Classificazione</h1>
+  <p><strong>Origine:</strong> {source}</p>
+  <p class="warning"><strong>Solo dry-run:</strong> questo report contiene solo suggerimenti. Nessun file è stato spostato, rinominato, cancellato, sovrascritto o riorganizzato. I file già dentro cartelle esistenti sono marcati <strong>keep_in_place</strong> per preservare il contesto.</p>
 
-  <h2>Summary</h2>
+  <h2>Riepilogo</h2>
   <div>
-    <div class="stat">Total files<span>{total_files}</span></div>
-    <div class="stat">Keep in place<span>{keep_in_place_count}</span></div>
-    <div class="stat">Root classify only<span>{classify_only_count}</span></div>
-    <div class="stat">Low confidence<span>{low_confidence_count}</span></div>
+    <div class="stat">File totali<span>{total_files}</span></div>
+    <div class="stat">Mantieni nella posizione attuale<span>{keep_in_place_count}</span></div>
+    <div class="stat">Solo classificazione (radice)<span>{classify_only_count}</span></div>
+    <div class="stat">Bassa confidenza<span>{low_confidence_count}</span></div>
   </div>
 
-  <h2>Location Policies</h2>
+  <h2>Politica posizione</h2>
   <table>
-    <thead><tr><th>Policy</th><th>Count</th></tr></thead>
+    <thead><tr><th>Politica</th><th>Conteggio</th></tr></thead>
     <tbody>{policy_rows}</tbody>
   </table>
 
-  <h2>Categories</h2>
+  <h2>Categoria</h2>
   <table>
-    <thead><tr><th>Category</th><th>Count</th></tr></thead>
+    <thead><tr><th>Categoria</th><th>Conteggio</th></tr></thead>
     <tbody>{category_rows}</tbody>
   </table>
 
   {low_section}
 
-  <h2>Sample Classifications (first 100)</h2>
+  <h2>Classificazioni campione (prime 100)</h2>
   <table>
-    <thead><tr><th>Path</th><th>Category</th><th>Location Policy</th><th>Suggested Folder</th><th>Confidence</th><th>Size</th><th>Signals</th></tr></thead>
+    <thead><tr><th>Percorso</th><th>Categoria</th><th>Politica posizione</th><th>Cartella suggerita</th><th>Confidenza</th><th>Dimensione</th><th>Segnali</th></tr></thead>
     <tbody>{sample_rows}</tbody>
   </table>
 </body>

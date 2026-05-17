@@ -47,7 +47,7 @@ def build_html(data: dict) -> str:
             f"</tr>\n"
         )
 
-    # Errors
+    # Errori
     error_section = ""
     if errors:
         rows = "".join(
@@ -55,18 +55,18 @@ def build_html(data: dict) -> str:
             for e in errors
         )
         error_section = f"""
-        <h2>Errors ({err_count})</h2>
+        <h2>Errori ({err_count})</h2>
         <table>
-          <thead><tr><th>Path</th><th>Error</th></tr></thead>
+          <thead><tr><th>Percorso</th><th>Errore</th></tr></thead>
           <tbody>{rows}</tbody>
         </table>
         """
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Archivio Personale AI — Inventory Report</title>
+  <title>Archivio Personale AI — Report Inventario</title>
   <style>
     body {{ font-family: sans-serif; margin: 2em; color: #222; }}
     h1 {{ color: #333; }}
@@ -80,26 +80,26 @@ def build_html(data: dict) -> str:
   </style>
 </head>
 <body>
-  <h1>Archivio Personale AI — Inventory Report</h1>
-  <p><strong>Source:</strong> {source}</p>
+  <h1>Archivio Personale AI — Report Inventario</h1>
+  <p><strong>Origine:</strong> {source}</p>
 
-  <h2>Summary</h2>
+  <h2>Riepilogo</h2>
   <div>
-    <div class="stat">Total files<span>{total_files}</span></div>
-    <div class="stat">Total size<span>{fmt_size(total_size)}</span></div>
-    <div class="stat">Skipped<span>{skipped}</span></div>
-    <div class="stat">Errors<span>{err_count}</span></div>
+    <div class="stat">File totali<span>{total_files}</span></div>
+    <div class="stat">Dimensione totale<span>{fmt_size(total_size)}</span></div>
+    <div class="stat">File ignorati<span>{skipped}</span></div>
+    <div class="stat">Errori<span>{err_count}</span></div>
   </div>
 
-  <h2>Top Extensions</h2>
+  <h2>Estensioni</h2>
   <table>
-    <thead><tr><th>Extension</th><th>Count</th></tr></thead>
+    <thead><tr><th>Estensione</th><th>Conteggio</th></tr></thead>
     <tbody>{top_ext_rows}</tbody>
   </table>
 
-  <h2>Largest Files (top 20)</h2>
+  <h2>File più grandi (primi 20)</h2>
   <table>
-    <thead><tr><th>Path</th><th>Size</th><th>Extension</th></tr></thead>
+    <thead><tr><th>Percorso</th><th>Dimensione</th><th>Estensione</th></tr></thead>
     <tbody>{largest_rows}</tbody>
   </table>
 

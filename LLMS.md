@@ -37,6 +37,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0145..ARCH-0164 | Batch 15 — validation runner polish and invariants | Closed — commit `9a6b237` |
 | ARCH-0165..ARCH-0184 | Batch 16 — CLI help consistency and validation coverage | Closed — commit `47f4b42` |
 | ARCH-0185..ARCH-0204 | Batch 17 — synthetic fixture consolidation and validation stability | Closed — commit `cdf28ec` |
+| ARCH-0205..ARCH-0224 | Batch 18 — synthetic end-to-end demo workflow | Closed — commit pending |
 
 ## Current phase
 

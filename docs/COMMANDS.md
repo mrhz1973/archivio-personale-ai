@@ -136,6 +136,23 @@ If the action plan report shows the summary and filters but no duplicate rows, o
 python scripts/generate_action_plan_report.py --input reports/proposed_actions.json --output reports/action_plan_report.html
 ```
 
+## Synthetic end-to-end demo
+
+Runs the full pipeline on a temporary directory of synthetic files. No personal files,
+no `reports/` output, no browser opening, no network.
+
+```powershell
+python .\scripts\run_synthetic_demo.py
+```
+
+Keep the temporary directory and print its path (useful for manual inspection):
+
+```powershell
+python .\scripts\run_synthetic_demo.py --keep-temp
+```
+
+Exit codes: `0` all steps passed, `1` one or more steps failed.
+
 ## Implementer post-task verification
 
 ```powershell

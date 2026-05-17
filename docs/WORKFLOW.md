@@ -58,8 +58,6 @@ A future local AI model (e.g. Ollama, LM Studio, llama.cpp) may improve classifi
 
 **Future controlled move phase (not yet implemented):** `proposed_moves.json` may exist only if the user explicitly approves a real move phase. It must be manually reviewed, require batch approval and a rollback plan, and must never be triggered automatically.
 
-### Proposed moves (future)
-
 ### Optional controlled move
 
 Only after explicit user approval and a rollback plan may a controlled move phase be considered. Each batch must be explicitly approved. This phase is opt-in and never automatic.

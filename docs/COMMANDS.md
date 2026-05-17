@@ -5,20 +5,32 @@ This file lists safe commands for the current phase. The source archive must rem
 ## Validation
 
 ```bash
-python -m py_compile scripts/inventory_readonly.py scripts/generate_inventory_report.py
+python -m py_compile scripts/inventory_readonly.py scripts/generate_inventory_report.py scripts/classify_inventory.py scripts/generate_classification_report.py
 python -m unittest discover -s tests -v
 ```
 
 ## Inventory example
 
 ```bash
-python scripts/inventory_readonly.py --source "D:\Archivio_Test" --output reports/inventory.json
+python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output reports/inventory.json
 ```
 
-## HTML report example
+## Inventory HTML report example
 
 ```bash
 python scripts/generate_inventory_report.py --input reports/inventory.json --output reports/inventory_report.html
+```
+
+## Dry-run classification example
+
+```bash
+python scripts/classify_inventory.py --input reports/inventory.json --output reports/classifications.json
+```
+
+## Classification HTML report example
+
+```bash
+python scripts/generate_classification_report.py --input reports/classifications.json --output reports/classification_report.html
 ```
 
 ## Git rules

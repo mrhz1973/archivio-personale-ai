@@ -54,7 +54,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0490..ARCH-0514 | Batch 25B — classification HTML report metadata and dry-run safety alignment | Closed — commit `8a773a8` |
 | ARCH-0515..ARCH-0539 | Batch 26A — action plan metadata deterministic review-only output | Closed — commit `f9f829d` |
 | ARCH-0540..ARCH-0564 | Batch 26B — action plan HTML report metadata and review-only alignment | Closed — commit `c0d36b7` |
-| ARCH-0565..ARCH-0589 | Batch 27A — synthetic demo manifest metadata and safety alignment | Closed — commit pending |
+| ARCH-0565..ARCH-0589 | Batch 27A — synthetic demo manifest metadata and safety alignment | Closed — commit `e5c3383` |
 
 ## Current phase
 

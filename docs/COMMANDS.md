@@ -147,6 +147,8 @@ python scripts/generate_action_plan.py --inventory reports/inventory.json --clas
 
 ## Action plan HTML report example
 
+`scripts/generate_action_plan_report.py` reads the action plan JSON, generates a static Italian HTML report showing metadata, summary (including `potential_reclaimable_human`), root sort candidates, duplicate priority counts, and duplicate groups with interactive filters. Report is review-only; never acts on personal files. Lo spazio recuperabile è solo teorico e nessuna cancellazione è proposta.
+
 ```powershell
 python scripts/generate_action_plan_report.py --input reports/proposed_actions.json --output reports/action_plan_report.html
 ```

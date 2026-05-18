@@ -37,6 +37,7 @@ def _priority_label(value: str) -> str:
 
 
 def build_html(data: dict) -> str:
+    meta = data.get("metadata") or {}
     summary = data.get("summary", {})
     root_sort_candidates = data.get("root_sort_candidates", [])
     duplicate_groups = data.get("duplicate_groups", [])
@@ -48,7 +49,13 @@ def build_html(data: dict) -> str:
     duplicate_groups_count = int(summary.get("duplicate_groups_count", 0) or 0)
     duplicate_files_count = int(summary.get("duplicate_files_count", 0) or 0)
     keep_in_place_count = int(summary.get("keep_in_place_count", 0) or 0)
-    potential_reclaimable = int(summary.get("potential_reclaimable_bytes", 0) or 0)
+
+    _reclaimable_human = summary.get("potential_reclaimable_human")
+    if _reclaimable_human:
+        reclaimable_label = html.escape(str(_reclaimable_human))
+    else:
+        potential_reclaimable = int(summary.get("potential_reclaimable_bytes", 0) or 0)
+        reclaimable_label = fmt_size(potential_reclaimable)
 
     sort_rows = ""
     for item in root_sort_candidates[:200]:
@@ -70,6 +77,34 @@ def build_html(data: dict) -> str:
             f"<td>{int(count)}</td>"
             "</tr>\n"
         )
+
+    metadata_section = ""
+    if meta:
+        mode_raw = str(meta.get("mode", ""))
+        mode_label = ("Modalit\u00e0: piano azioni solo revisione"
+                      if mode_raw == "review_only_action_plan" else html.escape(mode_raw))
+        meta_rows = ""
+        for label, key in [
+            ("Versione schema", "schema_version"),
+            ("Generato il", "generated_at_iso"),
+            ("Strumento", "tool"),
+            ("Strumento inventario", "inventory_tool"),
+            ("Strumento classificazioni", "classifications_tool"),
+            ("Schema inventario", "inventory_schema_version"),
+            ("Schema classificazioni", "classifications_schema_version"),
+        ]:
+            val = meta.get(key)
+            if val is not None and str(val):
+                meta_rows += f"<tr><td>{label}</td><td>{html.escape(str(val))}</td></tr>\n"
+        if mode_raw:
+            meta_rows += f"<tr><td>Modalit\u00e0</td><td>{mode_label}</td></tr>\n"
+        metadata_section = f"""
+  <h2>Informazioni piano azioni</h2>
+  <table>
+    <thead><tr><th>Campo</th><th>Valore</th></tr></thead>
+    <tbody>{meta_rows}</tbody>
+  </table>
+"""
 
     sort_section = (
         f"""
@@ -124,7 +159,7 @@ def build_html(data: dict) -> str:
     tr:nth-child(even) {{ background: #fafafa; }}
     .stat {{ display: inline-block; margin: 0 2em 1em 0; }}
     .stat span {{ display: block; font-size: 2em; font-weight: bold; color: #2255aa; }}
-    .warning {{ padding: 1em; background: #fff6d8; border: 1px solid #e5c45b; margin-bottom: 1em; }}
+    .safety-note {{ padding: 1em; background: #f8f8e8; border: 1px solid #cccc88; margin-bottom: 1em; border-radius: 4px; font-size: 0.95em; }}
     .filters {{ display: flex; flex-wrap: wrap; gap: 1em; align-items: center;
                 padding: 0.8em 1em; background: #f5f5f5; border: 1px solid #ddd;
                 margin-bottom: 1em; border-radius: 4px; }}
@@ -140,15 +175,17 @@ def build_html(data: dict) -> str:
 <body>
   <h1>Archivio Personale AI — Report Azioni Proposte</h1>
   <p><strong>Origine:</strong> {source}</p>
-  <p class="warning">
-    <strong>Solo revisione:</strong> questo report illustra cosa potrebbe essere fatto. Non sposta, rinomina,
-    cancella, sovrascrive o riorganizza alcun file. I file già dentro cartelle rimangono protetti
-    dalla politica keep_in_place.<br>
-    <strong>Lo spazio recuperabile è solo teorico</strong> — assume di mantenere una copia per gruppo
-    e non è un'istruzione di cancellazione. Nessuna cancellazione è proposta.<br>
+  <div class="safety-note">
+    <strong>Solo revisione.</strong> Report statico, piano azioni review-only.
+    Nessun file viene spostato, cancellato o rinominato da questo script.
+    I file gi\u00e0 dentro cartelle rimangono protetti dalla politica keep_in_place.
+    <br>
+    <strong>Lo spazio recuperabile \u00e8 solo teorico</strong> — richiede revisione manuale prima di qualsiasi azione futura.
+    Nessuna cancellazione \u00e8 proposta.
+    <br>
     <strong>File dentro cartelle/progetti</strong> richiedono cautela extra prima di qualsiasi azione manuale futura.
-  </p>
-
+  </div>
+{metadata_section}
   <h2>Riepilogo</h2>
   <div>
     <div class="stat">File totali<span>{total_files}</span></div>
@@ -156,7 +193,7 @@ def build_html(data: dict) -> str:
     <div class="stat">Candidati radice<span>{root_sort_count}</span></div>
     <div class="stat">Gruppi duplicati<span>{duplicate_groups_count}</span></div>
     <div class="stat">File duplicati<span>{duplicate_files_count}</span></div>
-    <div class="stat">Spazio teorico recuperabile<span>{fmt_size(potential_reclaimable)}</span></div>
+    <div class="stat">Spazio teorico recuperabile<span>{reclaimable_label}</span></div>
   </div>
 
   {sort_section}
@@ -359,10 +396,26 @@ def build_html(data: dict) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate a static HTML report from proposed actions JSON."
+        description=(
+            "Generate a static Italian HTML report from an action plan JSON. "
+            "Reads the action plan JSON produced by generate_action_plan.py. "
+            "Produces a static review-only HTML report. "
+            "Writes only the HTML file at --output. "
+            "Never modifies, moves, renames, or deletes source files."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Safety:\n"
+            "  Input JSON is read-only. No source file is modified.\n"
+            "  The HTML report is static and review-only.\n"
+            "  Only the HTML file at --output is written.\n\n"
+            "Exit codes:\n"
+            "  0  report written\n"
+            "  1  input file not found"
+        ),
     )
-    parser.add_argument("--input", required=True, help="Proposed actions JSON file path.")
-    parser.add_argument("--output", required=True, help="Output HTML file path.")
+    parser.add_argument("--input", required=True, help="Action plan JSON file path (read-only input).")
+    parser.add_argument("--output", required=True, help="Output HTML file path (only file written).")
     args = parser.parse_args()
 
     input_path = Path(args.input).resolve()

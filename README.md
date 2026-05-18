@@ -96,7 +96,7 @@ python -m unittest discover -s tests -v
 
 ## V1 readiness
 
-`docs/V1_READINESS.md` è il riferimento per capire se la v1 è pronta all'uso locale: contiene la checklist dei componenti implementati, i criteri di stop, la definizione di "v1 pronta" e i limiti intenzionali del progetto.
+`docs/V1_READINESS.md` è il riferimento per capire se la v1 è pronta all'uso locale: contiene la checklist dei componenti implementati, i criteri di stop, la definizione di "v1 pronta" e i limiti intenzionali del progetto. Usala come **release-candidate checklist locale** prima di eseguire la pipeline su un archivio reale.
 
 ## Safety
 

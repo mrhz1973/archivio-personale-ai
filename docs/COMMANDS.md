@@ -25,6 +25,8 @@ Ordine operativo suggerito per un primo utilizzo sicuro:
 
 Nessun passo esegue operazioni di spostamento, rinomina o cancellazione. Nessun report viene aperto automaticamente.
 
+**Controllo minimo pre-archivio reale:** i passi 1–3 (`run_first_time_check`, `run_validations --quick`, `run_synthetic_demo --quick`) costituiscono il controllo minimo consigliato prima di usare la pipeline su un archivio reale. Superarli conferma che l'ambiente locale è pronto e che la pipeline funziona su dati sintetici.
+
 Per la checklist completa di prontezza v1 (componenti implementati, criteri di stop, definizione di "v1 pronta"), vedi `docs/V1_READINESS.md`.
 
 ## Local shell policy (Windows)

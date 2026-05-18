@@ -127,6 +127,8 @@ Fermarsi immediatamente se compaiono:
 
 ## Definizione di v1 pronta
 
+Questa checklist è usata come **release-candidate checklist locale**: soddisfarla conferma che la pipeline locale è pronta per l'uso review-only. Non costituisce una garanzia di operazioni automatiche né un'approvazione implicita di passi che esulano dalla natura read-only/dry-run del progetto.
+
 La v1 è pronta per uso locale review-only quando:
 
 - [ ] Workspace Git pulito (`git status --short` vuoto)

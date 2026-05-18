@@ -102,6 +102,10 @@ python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output report
 
 ## Inventory HTML report example
 
+`scripts/generate_inventory_report.py` reads the inventory JSON and writes only the HTML file at `--output`. It never modifies source archive files. The HTML is in Italian and is review-only (no deletion, movement, or renaming proposed).
+
+HTML sections: `Informazioni report` (metadata), `Riepilogo` (summary with `total_size_human`, `directories_scanned`, `ignored_dirs_count`), `Estensioni`, `File più grandi — lista di revisione`.
+
 ```powershell
 python scripts/generate_inventory_report.py --input reports/inventory.json --output reports/inventory_report.html
 ```

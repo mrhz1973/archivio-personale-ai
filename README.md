@@ -1,6 +1,21 @@
 # Archivio Personale AI
 
-A safe, local-first helper for inventory and dry-run classification of a personal file archive on a local PC/internal HDD.
+## Cos'è Archivio Personale AI
+
+Un helper locale, sicuro e review-only per l'inventario e la classificazione dry-run di un archivio di file personali su PC locale o HDD interno.
+
+- **Local-first**: tutto gira sul tuo PC, nessun dato inviato all'esterno.
+- **Review-only**: i report sono per revisione manuale; nessuna azione automatica sui file.
+- **Safety-first**: nessuna operazione di spostamento, rinomina o cancellazione.
+- **Nessuna azione automatica sui file personali**: gli script leggono metadati e percorsi, non i contenuti dei file personali.
+
+## Cosa non fa
+
+- Non sposta file.
+- Non rinomina file.
+- Non cancella file.
+- Non usa cloud o servizi esterni sui contenuti personali.
+- Non apre report automaticamente.
 
 ## Current status
 
@@ -20,37 +35,35 @@ The source archive must stay outside the repo (for example `C:\Archivio_Test`).
 - Before implementer switch: verify workspace clean/aligned.
 - Local user environment is Windows: use PowerShell for local commands.
 
-## First-run readiness check
-
-Before running any other commands, verify that your environment meets minimal requirements:
-
-```powershell
-python .\scripts\run_first_time_check.py
-```
-
-This checks:
-- Python version >= 3.8
-- Expected scripts exist
-- Expected docs exist
-
-List planned checks without running them:
-
-```powershell
-python .\scripts\run_first_time_check.py --list
-```
-
 ## v1 quickstart
 
-Fastest path to verify the project on synthetic data (no personal files):
+Ordine consigliato per verificare l'ambiente e la pipeline su dati sintetici (nessun file personale):
 
 ```powershell
-python .\scripts\run_first_time_check.py       # 0. verify environment readiness
-python .\scripts\run_validations.py --quick    # 1. essential checks
-python .\scripts\run_synthetic_demo.py --quick # 2. quick pipeline smoke-test on synthetic data
-python .\scripts\run_synthetic_demo.py         # 3. full pipeline on synthetic data
+# 1. verifica prerequisiti locali
+python .\scripts\run_first_time_check.py
+
+# 2. controlli essenziali (py_compile + validate_reports --help)
+python .\scripts\run_validations.py --quick
+
+# 3. demo sintetica rapida (inventory → classify → report su dati sintetici)
+python .\scripts\run_synthetic_demo.py --quick
 ```
 
-All commands use only synthetic data and never touch personal files or `reports/`. No file is opened automatically. See `docs/COMMANDS.md` for advanced options.
+Tutti i comandi usano solo dati sintetici e non toccano file personali né `reports/`. Nessun file viene aperto automaticamente. Vedi `docs/COMMANDS.md` per le opzioni avanzate.
+
+### Demo sintetica
+
+La demo sintetica usa esclusivamente file temporanei innocui generati al momento: non legge file personali, non scrive in `reports/`, non apre browser, non usa rete o servizi esterni. La directory temporanea viene eliminata automaticamente al termine.
+
+```powershell
+python .\scripts\run_synthetic_demo.py --quick  # smoke-test rapido
+python .\scripts\run_synthetic_demo.py          # pipeline completa su dati sintetici
+```
+
+### Report HTML
+
+I report HTML generati (inventario, classificazione, piano azioni) sono in italiano e sono strumenti di **revisione manuale**. Non costituiscono istruzioni operative automatiche e non propongono alcuna cancellazione. Devono essere aperti esplicitamente dall'utente.
 
 ## Minimal usage
 
@@ -73,17 +86,6 @@ Do not auto-open reports with `start`, `Invoke-Item`, or equivalents unless expl
 ## Requirements
 
 - Python 3.8+ (standard library only)
-
-## Synthetic demo
-
-Verify the full pipeline on synthetic data (no personal files, no `reports/` writes):
-
-```powershell
-python .\scripts\run_synthetic_demo.py --quick   # quick smoke-test
-python .\scripts\run_synthetic_demo.py            # full pipeline
-```
-
-See `docs/COMMANDS.md` for all demo options including `--keep-temp`, `--quiet`, and `--no-manifest`.
 
 ## Running tests
 

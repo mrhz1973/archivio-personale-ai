@@ -2,6 +2,29 @@
 
 This file lists safe commands for the current phase. The source archive must remain read-only.
 
+## Flusso consigliato v1
+
+Ordine operativo suggerito per un primo utilizzo sicuro:
+
+1. **First-run check** — verifica prerequisiti locali:
+   `python .\scripts\run_first_time_check.py`
+2. **Validazione quick** — controlli essenziali (py_compile + validate_reports --help):
+   `python .\scripts\run_validations.py --quick`
+3. **Demo sintetica quick** — smoke-test pipeline su dati sintetici:
+   `python .\scripts\run_synthetic_demo.py --quick`
+4. **Demo sintetica full** — pipeline completa su dati sintetici:
+   `python .\scripts\run_synthetic_demo.py`
+5. **Inventario dry-run** — legge la sorgente, scrive solo il JSON di output:
+   `python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output reports/inventory.json`
+6. **Classificazione dry-run** — legge il JSON inventario, produce classificazioni review-only:
+   `python scripts/classify_inventory.py --input reports/inventory.json --output reports/classifications.json`
+7. **Piano azioni review-only** — legge inventario e classificazioni, produce piano per sola revisione manuale:
+   `python scripts/generate_action_plan.py --inventory reports/inventory.json --classifications reports/classifications.json --output reports/proposed_actions.json`
+8. **Validazione report** — verifica struttura HTML, lang="it", wording review-only:
+   `python .\scripts\validate_reports.py`
+
+Nessun passo esegue operazioni di spostamento, rinomina o cancellazione. Nessun report viene aperto automaticamente.
+
 ## Local shell policy (Windows)
 
 For user-local execution, use **PowerShell** syntax and examples.
@@ -27,7 +50,7 @@ Before running other commands, verify environment readiness:
 python .\scripts\run_first_time_check.py
 ```
 
-`run_first_time_check.py` verifies Python, required scripts, and expected docs. It is local-only, read-only, and does not use network or API, does not read personal files, does not read `reports/`, and does not modify any file.
+`run_first_time_check.py` verifica solo prerequisiti locali: Python, script richiesti e documentazione. È locale, read-only, non usa rete né servizi esterni, non legge file personali, non legge `reports/` e non modifica alcun file.
 
 Checks:
 - Python >= 3.8
@@ -61,7 +84,12 @@ Tests use synthetic data and temporary directories only. Do not reference `repor
 
 `scripts/run_validations.py` — stdlib only, no network, no report opening, no personal files.
 
-**Safety summary:** `run_validations.py` runs only local validations. `--quick` runs only the essential checks; `--list` runs nothing (just prints the planned checks); `--no-demo` skips only the synthetic demo in full mode (first-run check and unittest still run). The runner does not open reports or a browser, does not use network or external APIs, does not read personal files, and never proposes destructive operations.
+**Safety summary:** `run_validations.py` esegue solo validazioni locali. Non apre report né browser, non usa rete né servizi esterni, non legge file personali e non propone operazioni distruttive.
+
+**Flag principali:**
+- `--quick` — esegue solo i controlli essenziali (py_compile + validate_reports --help); salta first-run check, unittest e demo.
+- `--list` — non esegue nulla: stampa solo i controlli pianificati con i relativi label di modalità ed esce con 0.
+- `--no-demo` — modalità full senza demo sintetica; first-run check e unittest vengono comunque eseguiti.
 
 | Mode | Command | What runs |
 |------|---------|-----------|
@@ -92,7 +120,7 @@ Exit codes: `0` all checks passed (or `--list`), `1` one or more checks failed.
 
 ## Inventory example
 
-`scripts/inventory_readonly.py` reads the source folder and writes only the JSON file at `--output`. It never modifies, moves, renames, or deletes source files.
+`scripts/inventory_readonly.py` legge la cartella sorgente e scrive solo il file JSON indicato in `--output`. Non modifica, non sposta, non rinomina e non cancella i file sorgente.
 
 ```powershell
 python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output reports/inventory.json
@@ -106,7 +134,7 @@ python scripts/inventory_readonly.py --source "C:\Archivio_Test" --output report
 
 ## Inventory HTML report example
 
-`scripts/generate_inventory_report.py` reads the inventory JSON and writes only the HTML file at `--output`. It never modifies source archive files. The HTML is in Italian and is review-only (no deletion, movement, or renaming proposed).
+`scripts/generate_inventory_report.py` legge il JSON inventario e scrive solo il file HTML in `--output`. Non modifica i file sorgente. Il report è in italiano, è review-only (non propone cancellazioni, spostamenti né rinomina) e non viene aperto automaticamente.
 
 HTML sections: `Informazioni report` (metadata), `Riepilogo` (summary with `total_size_human`, `directories_scanned`, `ignored_dirs_count`), `Estensioni`, `File più grandi — lista di revisione`.
 
@@ -116,7 +144,7 @@ python scripts/generate_inventory_report.py --input reports/inventory.json --out
 
 ## Dry-run classification example
 
-`scripts/classify_inventory.py` reads only the inventory JSON, uses metadata and relative paths already present in the JSON, produces dry-run classification suggestions, preserves context of files in subfolders (`keep_in_place`), and never acts on personal files. Writes only the JSON at `--output`.
+`scripts/classify_inventory.py` legge solo il JSON inventario, usa i metadati e i percorsi relativi già presenti nel JSON — non legge il contenuto dei file personali. Produce classificazioni dry-run, preserva il contesto dei file in sottocartelle (`keep_in_place`) e non agisce mai sui file personali. Scrive solo il JSON in `--output`.
 
 **JSON output format:**
 - `metadata` — `schema_version`, `generated_at_iso`, `tool`, `mode` (`dry_run_classification`), `input_tool`, `input_schema_version`
@@ -129,7 +157,7 @@ python scripts/classify_inventory.py --input reports/inventory.json --output rep
 
 ## Classification HTML report example
 
-`scripts/generate_classification_report.py` reads the classification JSON, generates a static Italian HTML report showing metadata, summary (with `confidence_buckets`, `root_file_count`, `context_bound_count`), category counts, location-policy counts, and a sample of classifications. Report is review-only; never acts on personal files.
+`scripts/generate_classification_report.py` legge il JSON classificazioni e genera un report HTML statico in italiano (metadati, riepilogo con `confidence_buckets`, conteggi categorie e policy). Il report è review-only, non agisce sui file personali e non viene aperto automaticamente.
 
 ```powershell
 python scripts/generate_classification_report.py --input reports/classifications.json --output reports/classification_report.html
@@ -137,7 +165,7 @@ python scripts/generate_classification_report.py --input reports/classifications
 
 ## Review-only action plan example
 
-`scripts/generate_action_plan.py` reads inventory JSON and classifications JSON, produces a review-only action plan (root sort candidates + duplicate groups), indicates candidates and duplicates for manual review only, and never acts on personal files. Reclaimable space (`potential_reclaimable_human`) is theoretical.
+`scripts/generate_action_plan.py` legge il JSON inventario e le classificazioni, produce un piano review-only (candidati a riordino radice + gruppi duplicati) per sola revisione manuale. Non agisce mai sui file personali. Lo spazio recuperabile (`potential_reclaimable_human`) è solo teorico — nessuna cancellazione è proposta.
 
 **JSON output format:**
 - `metadata` — `schema_version`, `generated_at_iso`, `tool`, `mode` (`review_only_action_plan`), `inventory_tool`, `classifications_tool`, `inventory_schema_version`, `classifications_schema_version`
@@ -151,7 +179,7 @@ python scripts/generate_action_plan.py --inventory reports/inventory.json --clas
 
 ## Action plan HTML report example
 
-`scripts/generate_action_plan_report.py` reads the action plan JSON, generates a static Italian HTML report showing metadata, summary (including `potential_reclaimable_human`), root sort candidates, duplicate priority counts, and duplicate groups with interactive filters. Report is review-only; never acts on personal files. Lo spazio recuperabile è solo teorico e nessuna cancellazione è proposta.
+`scripts/generate_action_plan_report.py` legge il JSON piano azioni e genera un report HTML statico in italiano (metadati, riepilogo con `potential_reclaimable_human`, candidati a riordino, gruppi duplicati con filtri interattivi). Il report è review-only, non agisce sui file personali, non propone cancellazioni e non viene aperto automaticamente. Lo spazio recuperabile è solo teorico.
 
 ```powershell
 python scripts/generate_action_plan_report.py --input reports/proposed_actions.json --output reports/action_plan_report.html
@@ -173,7 +201,7 @@ Never auto-open reports during validation. Do not use `start`, `Invoke-Item`, or
 
 ## Report validation (structural, no browser)
 
-`scripts/validate_reports.py` valida gli HTML generati: controlla `lang="it"`, struttura minima (`<!DOCTYPE html>` o `<html`, `<body>`), wording review-only e wording pericoloso non negato. Non apre browser, non modifica file, non crea directory, non scrive output e non usa rete/API.
+`scripts/validate_reports.py` valida la struttura minima degli HTML generati: controlla `lang="it"`, presenza di `<!DOCTYPE html>`/`<html`/`<body>`, wording review-only obbligatorio e assenza di wording pericoloso non negato (delete, move, rename, ecc.). Non apre browser, non modifica file, non crea directory, non scrive output e non usa rete né servizi esterni.
 
 Exit codes: `0` no errors, `1` validation errors, `2` invalid path or CLI usage.
 
@@ -210,7 +238,7 @@ python scripts/generate_action_plan_report.py --input reports/proposed_actions.j
 | Demo completo | `python .\scripts\run_synthetic_demo.py` | tutte le 7 fasi della pipeline su dati sintetici |
 | Ispezione manuale | `python .\scripts\run_synthetic_demo.py --keep-temp` | demo completo, stampa temp dir e manifest path, nessuna apertura automatica |
 
-`scripts/run_synthetic_demo.py` usa solo fixture sintetiche in una directory temporanea. Non usa file personali, non usa rete o API, non scrive in `reports/`, non apre browser. Il `demo_manifest.json` prodotto include `metadata` (schema_version, tool, mode, safety_profile) e `safety` (tutti i flag a `false`). I `generated_files` sono ordinati per `path`. Tutto è temporaneo e non va committato.
+`scripts/run_synthetic_demo.py` usa esclusivamente fixture sintetiche in una directory temporanea: non legge file personali, non scrive in `reports/`, non apre browser e non usa rete né servizi esterni. La directory temporanea viene eliminata automaticamente al termine (salvo `--keep-temp`). Il `demo_manifest.json` prodotto include `metadata` (schema_version, tool, mode, safety_profile) e `safety` (tutti i flag a `false`). I `generated_files` sono ordinati per `path`. Tutto è temporaneo e non va committato.
 
 ## Synthetic demo — quickstart
 
@@ -232,9 +260,7 @@ python .\scripts\run_synthetic_demo.py --keep-temp
 
 ## Synthetic end-to-end demo
 
-Runs the full pipeline on a temporary directory of **synthetic, innocuous files** (not personal files).
-All output goes to a temporary directory that is deleted automatically on exit.
-Never writes to `reports/`, never opens a browser, never uses network or API.
+Esegue la pipeline completa su una directory temporanea di **file sintetici innocui** (non file personali). Tutto l'output va in una directory temporanea eliminata automaticamente al termine. Non scrive in `reports/`, non apre browser, non usa rete né servizi esterni.
 
 | Mode | Command | What runs |
 |------|---------|-----------|

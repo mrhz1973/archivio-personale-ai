@@ -1,6 +1,14 @@
 """
-ARCH-0136..ARCH-0139, ARCH-0147..ARCH-0158 — Local validation runner.
-Standard library only. No network, no report opening, no personal files.
+ARCH-0136..ARCH-0139, ARCH-0147..ARCH-0158, ARCH-0630..ARCH-0649 — Local validation runner.
+
+Runs local validations only. Designed to be safe-by-default:
+
+- only local validations using the Python standard library;
+- no network calls, no external APIs;
+- no report opening, no browser launch, no auto-open of files;
+- never reads or writes personal files;
+- writes no user-facing output to disk;
+- no destructive operations (no move, no rename, no delete on user files).
 
 Exit codes:
   0   all checks passed (or --list)
@@ -79,9 +87,17 @@ def _run_step(label, argv, quiet=False):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Run local project validations (stdlib only, no network, no report opening).",
+        description=(
+            "Run local project validations only. "
+            "Stdlib only; no network/API; no report opening; "
+            "no personal files; no destructive operations."
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
+            "Safety: local validations only; no network or external API; "
+            "no report opening or browser launch; no personal files; "
+            "no destructive operations.\n"
+            "\n"
             "Exit codes:\n"
             "  0  all checks passed (or --list)\n"
             "  1  one or more checks failed"
@@ -111,7 +127,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.list:
-        print("Planned checks:")
+        print("Planned checks (--list mode; no checks are executed):")
         for label, _, skip_in_quick in _STEPS:
             mode = "quick+full" if not skip_in_quick else "full only "
             print(f"  [{mode}]  {label}")
@@ -150,11 +166,12 @@ def main(argv=None):
     print()
     mode_str = "quick" if args.quick else "full"
     total_run = ok_count + len(failures)
-    parts = [f"{total_run} run", f"{ok_count} OK"]
-    if failures:
-        parts.append(f"{len(failures)} failed")
-    if skipped:
-        parts.append(f"{len(skipped)} skipped")
+    parts = [
+        f"{total_run} run",
+        f"{ok_count} OK",
+        f"{len(failures)} failed",
+        f"{len(skipped)} skipped",
+    ]
     print(f"Summary ({mode_str}): {', '.join(parts)}")
     if failures:
         print(f"Failed: {', '.join(failures)}")

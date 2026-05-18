@@ -612,5 +612,331 @@ class TestNoDemoFirstRunCheck(unittest.TestCase):
                          "--no-demo must not skip first-run check")
 
 
+# ── ARCH-0633..0637: help safety wording and forbidden language ──────────────
+
+
+def _capture_runner_help():
+    """Invoke run_validations.main(['--help']) and capture stdout+stderr.
+
+    Returns (exit_code, output). argparse calls sys.exit(0) on --help.
+    """
+    import io
+    from contextlib import redirect_stderr, redirect_stdout
+    buf = io.StringIO()
+    code = 0
+    try:
+        with redirect_stdout(buf):
+            with redirect_stderr(buf):
+                rc = rv.main(["--help"])
+        code = rc if rc is not None else 0
+    except SystemExit as e:
+        code = e.code if e.code is not None else 0
+    return code, buf.getvalue()
+
+
+class TestHelpExitsZero(unittest.TestCase):
+    """ARCH-0633: --help must exit 0."""
+
+    def test_help_exits_zero(self):
+        code, _ = _capture_runner_help()
+        self.assertEqual(code, 0)
+
+
+class TestHelpSafetyWording(unittest.TestCase):
+    """ARCH-0634: --help must contain the project's safety wording."""
+
+    @classmethod
+    def setUpClass(cls):
+        _, cls._output = _capture_runner_help()
+        cls._lower = cls._output.lower()
+
+    def test_help_mentions_local_validations(self):
+        self.assertIn("local", self._lower)
+        self.assertIn("validations", self._lower)
+
+    def test_help_mentions_no_network(self):
+        self.assertIn("no network", self._lower)
+
+    def test_help_mentions_no_report_opening(self):
+        self.assertIn("no report opening", self._lower)
+
+    def test_help_mentions_no_personal_files(self):
+        self.assertIn("no personal files", self._lower)
+
+
+class TestHelpNoOperativeCloudAPI(unittest.TestCase):
+    """ARCH-0635: --help must not present API/cloud/n8n/MCP as operative actions."""
+
+    @classmethod
+    def setUpClass(cls):
+        _, cls._output = _capture_runner_help()
+        cls._lower = cls._output.lower()
+
+    def test_help_no_n8n(self):
+        self.assertNotIn("n8n", self._lower)
+
+    def test_help_no_mcp_token(self):
+        self.assertNotIn(" mcp", self._lower)
+        self.assertNotIn("mcp ", self._lower)
+
+    def test_help_no_api_key_or_token(self):
+        self.assertNotIn("api_key", self._lower)
+        self.assertNotIn("access_token", self._lower)
+
+    def test_help_no_operative_cloud_phrasing(self):
+        forbidden_phrases = (
+            "use api", "via api", "call api", "api call",
+            "n8n workflow", "cloud service", "mcp server",
+            "upload to cloud", "send to cloud",
+            "s3://", "gcs://",
+        )
+        for phrase in forbidden_phrases:
+            self.assertNotIn(phrase, self._lower,
+                             f"help must not present '{phrase}' as an operative action")
+
+
+class TestHelpNoAutoOpen(unittest.TestCase):
+    """ARCH-0636: --help must not suggest auto-opening reports/files/browser."""
+
+    @classmethod
+    def setUpClass(cls):
+        _, cls._output = _capture_runner_help()
+        cls._lower = cls._output.lower()
+
+    def test_help_no_invoke_item(self):
+        self.assertNotIn("invoke-item", self._lower)
+
+    def test_help_no_webbrowser(self):
+        self.assertNotIn("webbrowser", self._lower)
+
+    def test_help_no_auto_open_phrases(self):
+        for phrase in ("open report", "open browser", "auto-open",
+                       "apri report", "apri browser", "apertura automatica"):
+            self.assertNotIn(phrase, self._lower,
+                             f"help must not suggest '{phrase}'")
+
+    def test_help_no_start_open_html(self):
+        import re
+        self.assertNotRegex(self._output, r"\bstart\s+\S+\.(html|json|pdf)")
+
+
+class TestHelpNoUnnegatedDestructiveLanguage(unittest.TestCase):
+    """ARCH-0637: destructive verbs only allowed in explicit negation context."""
+
+    @classmethod
+    def setUpClass(cls):
+        _, cls._output = _capture_runner_help()
+        cls._lower = cls._output.lower()
+
+    _FORBIDDEN = ("delete", "move", "rename", "cancellare", "spostare", "rinominare")
+    _NEGATION_MARKERS = (
+        "no ", "not ", "never ", "non ", "nessun", "senza ",
+        "doesn't ", "won't ", "can't ", "cannot ", "no-", "non-",
+    )
+
+    def test_no_bare_destructive_verbs(self):
+        import re
+        for word in self._FORBIDDEN:
+            for match in re.finditer(rf"\b{word}\b", self._lower):
+                pos = match.start()
+                prefix = self._lower[max(0, pos - 20):pos]
+                negated = any(neg in prefix for neg in self._NEGATION_MARKERS)
+                self.assertTrue(
+                    negated,
+                    f"unnegated destructive word {word!r} in help at pos {pos}; "
+                    f"context: {prefix + word!r}",
+                )
+
+
+# ── ARCH-0639..0642: --list output details ───────────────────────────────────
+
+
+class TestListModeExitAndNoExecution(unittest.TestCase):
+    """ARCH-0639: --list exits 0 and never runs a subprocess."""
+
+    def test_list_exits_zero_and_no_subprocess(self):
+        with patch("scripts.run_validations.subprocess.run") as mock_run:
+            rc = rv.main(["--list"])
+        self.assertEqual(rc, 0)
+        mock_run.assert_not_called()
+
+    def test_list_states_no_execution(self):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run"):
+            with redirect_stdout(buf):
+                rv.main(["--list"])
+        self.assertIn("no checks are executed", buf.getvalue().lower())
+
+
+class TestListStepModes(unittest.TestCase):
+    """ARCH-0640..0642: --list must label each step with its run mode."""
+
+    @classmethod
+    def setUpClass(cls):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run"):
+            with redirect_stdout(buf):
+                rv.main(["--list"])
+        cls._output = buf.getvalue()
+        cls._lines = cls._output.splitlines()
+
+    def _line_for(self, label):
+        matches = [l for l in self._lines if label in l]
+        self.assertTrue(matches, f"label not found in --list output: {label}")
+        return matches[0]
+
+    def test_list_shows_first_run_check_as_full_only(self):
+        """ARCH-0640: first-run check must be labelled 'full only'."""
+        self.assertIn("full only", self._line_for("first-run check"))
+
+    def test_list_shows_py_compile_as_quick_full(self):
+        """ARCH-0641: py_compile must be labelled 'quick+full'."""
+        self.assertIn("quick+full", self._line_for("py_compile"))
+
+    def test_list_shows_validate_reports_as_quick_full(self):
+        """ARCH-0641: validate_reports --help must be labelled 'quick+full'."""
+        self.assertIn("quick+full", self._line_for("validate_reports --help"))
+
+    def test_list_shows_unittest_discover_as_full_only(self):
+        """ARCH-0642: unittest discover must be labelled 'full only'."""
+        self.assertIn("full only", self._line_for("unittest discover"))
+
+    def test_list_shows_synthetic_demo_as_full_only(self):
+        """ARCH-0642: synthetic demo must be labelled 'full only'."""
+        self.assertIn("full only", self._line_for("synthetic demo"))
+
+
+# ── ARCH-0643..0644: --quick / --no-demo skip output (explicit batch labels) ─
+
+
+class TestQuickSkipsFullOnlySteps(unittest.TestCase):
+    """ARCH-0643: --quick must signal [SKIP] for every full-only step."""
+
+    @classmethod
+    def setUpClass(cls):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(0)):
+            with redirect_stdout(buf):
+                rv.main(["--quick"])
+        cls._output = buf.getvalue()
+
+    def test_quick_skips_first_run_check(self):
+        self.assertIn("[SKIP] first-run check", self._output)
+
+    def test_quick_skips_unittest_discover(self):
+        self.assertIn("[SKIP] unittest discover", self._output)
+
+    def test_quick_skips_synthetic_demo(self):
+        self.assertIn("[SKIP] synthetic demo", self._output)
+
+
+class TestNoDemoSkipsOnlySyntheticDemo(unittest.TestCase):
+    """ARCH-0644: --no-demo must skip only synthetic demo, never first-run check."""
+
+    @classmethod
+    def setUpClass(cls):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(0)):
+            with redirect_stdout(buf):
+                rv.main(["--no-demo"])
+        cls._output = buf.getvalue()
+
+    def test_no_demo_skips_synthetic_demo(self):
+        self.assertIn("[SKIP] synthetic demo", self._output)
+
+    def test_no_demo_does_not_skip_first_run_check(self):
+        self.assertNotIn("[SKIP] first-run check", self._output)
+
+    def test_no_demo_does_not_skip_unittest(self):
+        self.assertNotIn("[SKIP] unittest discover", self._output)
+
+
+# ── ARCH-0645..0646: final summary is explicit and always printed ────────────
+
+
+class TestSummaryExplicitAndPrinted(unittest.TestCase):
+    """ARCH-0645/0646: summary always prints mode, run, OK, failed, skipped."""
+
+    def _capture(self, args):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with patch("scripts.run_validations.subprocess.run", return_value=_make_result(0)):
+            with redirect_stdout(buf):
+                rc = rv.main(args)
+        return rc, buf.getvalue()
+
+    def test_summary_printed_in_quick_mode(self):
+        """ARCH-0646: --quick prints the final summary line."""
+        rc, out = self._capture(["--quick"])
+        self.assertEqual(rc, 0)
+        self.assertIn("Summary (quick):", out)
+
+    def test_summary_quick_contains_all_required_fields(self):
+        """ARCH-0645: quick summary lists mode, run, OK, failed, skipped."""
+        _, out = self._capture(["--quick"])
+        summary_line = next(l for l in out.splitlines() if l.startswith("Summary "))
+        for token in ("(quick)", " run", " OK", " failed", " skipped"):
+            self.assertIn(token, summary_line,
+                          f"summary line missing {token!r}: {summary_line!r}")
+
+    def test_summary_full_contains_all_required_fields(self):
+        """ARCH-0645: full summary lists mode, run, OK, failed, skipped."""
+        _, out = self._capture([])
+        summary_line = next(l for l in out.splitlines() if l.startswith("Summary "))
+        for token in ("(full)", " run", " OK", " failed", " skipped"):
+            self.assertIn(token, summary_line,
+                          f"summary line missing {token!r}: {summary_line!r}")
+
+
+# ── ARCH-0647: extended static source invariants ─────────────────────────────
+
+
+class TestRunnerSourceInvariantsExtended(unittest.TestCase):
+    """ARCH-0647: runner source must not reference network/browser/open primitives."""
+
+    def setUp(self):
+        self._src = inspect.getsource(rv)
+        self._lower = self._src.lower()
+
+    def test_no_webbrowser_module(self):
+        self.assertNotIn("webbrowser", self._lower)
+
+    def test_no_requests_module(self):
+        self.assertNotIn("import requests", self._lower)
+        self.assertNotIn("from requests", self._lower)
+
+    def test_no_urllib(self):
+        self.assertNotIn("urllib", self._lower)
+
+    def test_no_socket_module(self):
+        self.assertNotIn("import socket", self._lower)
+        self.assertNotIn("from socket", self._lower)
+
+    def test_no_os_startfile(self):
+        self.assertNotIn("os.startfile", self._lower)
+        self.assertNotIn("startfile(", self._lower)
+
+    def test_no_invoke_item(self):
+        # case-sensitive: PowerShell cmdlet name
+        self.assertNotIn("Invoke-Item", self._src)
+
+    def test_no_start_process(self):
+        self.assertNotIn("start-process", self._lower)
+        self.assertNotIn("subprocess.popen", self._lower)
+
+    def test_no_start_open_html(self):
+        import re
+        self.assertNotRegex(self._src, r"\bstart\s+\S+\.(html|json|pdf)")
+
+
 if __name__ == "__main__":
     unittest.main()

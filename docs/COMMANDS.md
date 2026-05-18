@@ -59,6 +59,8 @@ Tests use synthetic data and temporary directories only. Do not reference `repor
 
 `scripts/run_validations.py` — stdlib only, no network, no report opening, no personal files.
 
+**Safety summary:** `run_validations.py` runs only local validations. `--quick` runs only the essential checks; `--list` runs nothing (just prints the planned checks); `--no-demo` skips only the synthetic demo in full mode (first-run check and unittest still run). The runner does not open reports or a browser, does not use network or external APIs, does not read personal files, and never proposes destructive operations.
+
 | Mode | Command | What runs |
 |------|---------|-----------|
 | full | `python .\scripts\run_validations.py` | first-run check + py_compile + unittest discover + validate_reports --help + synthetic demo |

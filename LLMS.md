@@ -51,7 +51,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0405..ARCH-0429 | Batch 24B — inventory JSON metadata and deterministic output | Closed — commit `c1a3f45` |
 | ARCH-0430..ARCH-0464 | Batch 24C — inventory HTML report metadata and safety alignment | Closed — commit `93ab4b6` |
 | ARCH-0465..ARCH-0489 | Batch 25A — classification metadata deterministic dry-run output | Closed — commit `550cf06` |
-| ARCH-0490..ARCH-0514 | Batch 25B — classification HTML report metadata and dry-run safety alignment | Closed — commit pending |
+| ARCH-0490..ARCH-0514 | Batch 25B — classification HTML report metadata and dry-run safety alignment | Closed — commit `8a773a8` |
 
 ## Current phase
 

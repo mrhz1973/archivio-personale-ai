@@ -133,6 +133,14 @@ python scripts/generate_classification_report.py --input reports/classifications
 
 ## Review-only action plan example
 
+`scripts/generate_action_plan.py` reads inventory JSON and classifications JSON, produces a review-only action plan (root sort candidates + duplicate groups), indicates candidates and duplicates for manual review only, and never acts on personal files. Reclaimable space (`potential_reclaimable_human`) is theoretical.
+
+**JSON output format:**
+- `metadata` — `schema_version`, `generated_at_iso`, `tool`, `mode` (`review_only_action_plan`), `inventory_tool`, `classifications_tool`, `inventory_schema_version`, `classifications_schema_version`
+- `summary` — counts, `potential_reclaimable_bytes`, `potential_reclaimable_human`, `duplicate_priority_counts`
+- `root_sort_candidates` — sorted by `relative_path`; each entry has `dry_run_only: true`
+- `duplicate_groups` — sorted by reclaimable bytes desc, then sha256 for stable tie-break
+
 ```powershell
 python scripts/generate_action_plan.py --inventory reports/inventory.json --classifications reports/classifications.json --output reports/proposed_actions.json
 ```

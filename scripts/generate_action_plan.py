@@ -12,8 +12,19 @@ It proposes two safe kinds of information:
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import PurePosixPath, Path
 from typing import Any
+
+
+def fmt_size(size_bytes: int) -> str:
+    """Format byte count as a human-readable string (B, KiB, MiB, GiB, TiB)."""
+    value = float(size_bytes)
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
+        if value < 1024:
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{value:.1f} PiB"
 
 
 ROOT_SORTABLE_CATEGORIES = {
@@ -204,8 +215,12 @@ def build_duplicate_groups(
 
     return sorted(
         groups,
-        key=lambda group: (group["potential_reclaimable_bytes"], group["count"], group["total_size_bytes"]),
-        reverse=True,
+        key=lambda group: (
+            -group["potential_reclaimable_bytes"],
+            -group["count"],
+            -group["total_size_bytes"],
+            group["sha256"],
+        ),
     )
 
 
@@ -214,7 +229,7 @@ def build_priority_counts(duplicate_groups: list[dict[str, Any]]) -> dict[str, i
     for group in duplicate_groups:
         priority = str(group.get("review_priority", "manual_review"))
         counts[priority] = counts.get(priority, 0) + 1
-    return dict(sorted(counts.items(), key=lambda x: x[1], reverse=True))
+    return dict(sorted(counts.items(), key=lambda x: (-x[1], x[0])))
 
 
 def build_action_plan(inventory_data: dict[str, Any], classifications_data: dict[str, Any]) -> dict[str, Any]:
@@ -222,13 +237,31 @@ def build_action_plan(inventory_data: dict[str, Any], classifications_data: dict
     classification_lookup = build_classification_lookup(classifications_data)
 
     sort_candidates = build_sort_candidates(inventory_lookup, classification_lookup)
+    sort_candidates.sort(key=lambda x: x.get("relative_path", ""))
+
     duplicate_groups = build_duplicate_groups(inventory_lookup, classification_lookup)
 
     policy_counts = classifications_data.get("summary", {}).get("location_policy_counts", {})
     duplicate_files_count = sum(int(group["count"]) for group in duplicate_groups)
     potential_reclaimable_bytes = sum(int(group.get("potential_reclaimable_bytes", 0)) for group in duplicate_groups)
 
+    inv_meta = inventory_data.get("metadata") or {}
+    cls_meta = classifications_data.get("metadata") or {}
+    generated_at = datetime.now(tz=timezone.utc).isoformat()
+
+    metadata = {
+        "schema_version": "1.0",
+        "generated_at_iso": generated_at,
+        "tool": "generate_action_plan.py",
+        "mode": "review_only_action_plan",
+        "inventory_tool": str(inv_meta.get("tool", "")),
+        "classifications_tool": str(cls_meta.get("tool", "")),
+        "inventory_schema_version": str(inv_meta.get("schema_version", "")),
+        "classifications_schema_version": str(cls_meta.get("schema_version", "")),
+    }
+
     return {
+        "metadata": metadata,
         "summary": {
             "source": inventory_data.get("summary", {}).get("source", ""),
             "total_files": len(inventory_lookup),
@@ -237,6 +270,7 @@ def build_action_plan(inventory_data: dict[str, Any], classifications_data: dict
             "duplicate_files_count": duplicate_files_count,
             "duplicate_priority_counts": build_priority_counts(duplicate_groups),
             "potential_reclaimable_bytes": potential_reclaimable_bytes,
+            "potential_reclaimable_human": fmt_size(potential_reclaimable_bytes),
             "keep_in_place_count": int(policy_counts.get("keep_in_place", 0) or 0),
             "classify_only_count": int(policy_counts.get("classify_only", 0) or 0),
             "dry_run_only": True,
@@ -249,11 +283,27 @@ def build_action_plan(inventory_data: dict[str, Any], classifications_data: dict
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate a review-only action plan for Archivio Personale AI."
+        description=(
+            "Generate a review-only action plan for Archivio Personale AI. "
+            "Reads inventory JSON and classifications JSON. "
+            "Produces only a review-only plan: no file is moved, renamed, deleted, or modified. "
+            "Writes only the JSON file at --output. "
+            "Reclaimable space is theoretical and requires manual review before any action."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Safety:\n"
+            "  Both input files are read-only. No source file is modified.\n"
+            "  All entries are review-only (dry_run_only: true in output).\n"
+            "  Only the JSON file at --output is written.\n\n"
+            "Exit codes:\n"
+            "  0  action plan written\n"
+            "  1  input file not found"
+        ),
     )
-    parser.add_argument("--inventory", required=True, help="Input inventory JSON path.")
-    parser.add_argument("--classifications", required=True, help="Input classifications JSON path.")
-    parser.add_argument("--output", required=True, help="Output proposed actions JSON path.")
+    parser.add_argument("--inventory", required=True, help="Input inventory JSON path (read-only).")
+    parser.add_argument("--classifications", required=True, help="Input classifications JSON path (read-only).")
+    parser.add_argument("--output", required=True, help="Output proposed actions JSON path (only file written).")
     args = parser.parse_args()
 
     inventory_path = Path(args.inventory).resolve()

@@ -58,7 +58,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0590..ARCH-0629 | Batch 27B — report validator CLI safety and Italian invariants | Closed — commit `5513fec` |
 | ARCH-0630..ARCH-0649 | Batch 28A — validation runner safety wording and list-mode hardening | Closed — commit `75732aa` |
 | ARCH-0650..ARCH-0669 | Batch 28B — first-run readiness check safety and output clarity | Closed — commit `dccd943` |
-| ARCH-0670..ARCH-0689 | Batch 28C — v1 quickstart docs and operator command flow | Closed — commit pending |
+| ARCH-0670..ARCH-0689 | Batch 28C — v1 quickstart docs and operator command flow | Closed — commit `0206f68` |
 
 ## Current phase
 

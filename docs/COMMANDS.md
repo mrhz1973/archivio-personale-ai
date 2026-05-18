@@ -205,7 +205,7 @@ python scripts/generate_action_plan_report.py --input reports/proposed_actions.j
 | Demo completo | `python .\scripts\run_synthetic_demo.py` | tutte le 7 fasi della pipeline su dati sintetici |
 | Ispezione manuale | `python .\scripts\run_synthetic_demo.py --keep-temp` | demo completo, stampa temp dir e manifest path, nessuna apertura automatica |
 
-Tutti i comandi usano solo dati sintetici e non toccano file personali o `reports/`. Nessun file viene aperto automaticamente. `demo_manifest.json` è temporaneo e non va committato.
+`scripts/run_synthetic_demo.py` usa solo fixture sintetiche in una directory temporanea. Non usa file personali, non usa rete o API, non scrive in `reports/`, non apre browser. Il `demo_manifest.json` prodotto include `metadata` (schema_version, tool, mode, safety_profile) e `safety` (tutti i flag a `false`). I `generated_files` sono ordinati per `path`. Tutto è temporaneo e non va committato.
 
 ## Synthetic demo — quickstart
 

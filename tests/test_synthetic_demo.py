@@ -488,5 +488,207 @@ class TestDemoKeepTempManifestPath(unittest.TestCase):
                 break
 
 
+# ── ARCH-0571..0580: manifest metadata, safety, no abs paths, sorted files ────
+
+class TestDemoManifestMetadata(unittest.TestCase):
+    """ARCH-0571..0574: manifest.metadata field and subfields."""
+
+    def _load_manifest(self, quick=False):
+        with tempfile.TemporaryDirectory(prefix="archivio_test_meta_") as tmp:
+            tmpdir = Path(tmp)
+            demo._run_pipeline(tmpdir, keep_temp=False, quick=quick)
+            return json.loads((tmpdir / "demo_manifest.json").read_text(encoding="utf-8"))
+
+    def test_metadata_field_present(self):
+        """ARCH-0571: top-level metadata exists in manifest."""
+        manifest = self._load_manifest()
+        self.assertIn("metadata", manifest)
+
+    def test_metadata_subfields_present(self):
+        """ARCH-0572: all expected metadata subfields present."""
+        manifest = self._load_manifest()
+        m = manifest["metadata"]
+        for key in ("schema_version", "tool", "mode", "safety_profile"):
+            self.assertIn(key, m, f"metadata.{key} missing")
+
+    def test_metadata_tool_value(self):
+        """ARCH-0572: metadata.tool is run_synthetic_demo.py."""
+        manifest = self._load_manifest()
+        self.assertEqual(manifest["metadata"]["tool"], "run_synthetic_demo.py")
+
+    def test_metadata_mode_full(self):
+        """ARCH-0573: metadata.mode is synthetic_demo_full in full mode."""
+        manifest = self._load_manifest(quick=False)
+        self.assertEqual(manifest["metadata"]["mode"], "synthetic_demo_full")
+
+    def test_metadata_mode_quick(self):
+        """ARCH-0574: metadata.mode is synthetic_demo_quick in quick mode."""
+        manifest = self._load_manifest(quick=True)
+        self.assertEqual(manifest["metadata"]["mode"], "synthetic_demo_quick")
+
+    def test_metadata_safety_profile(self):
+        """ARCH-0572: metadata.safety_profile is set."""
+        manifest = self._load_manifest()
+        self.assertEqual(manifest["metadata"]["safety_profile"],
+                         "synthetic_temp_only_no_personal_files")
+
+
+class TestDemoManifestSafetyFlags(unittest.TestCase):
+    """ARCH-0575/0576: manifest.safety flags all present and all False."""
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="archivio_test_safety_")
+        self._tmpdir = Path(self._tmp)
+        demo._run_pipeline(self._tmpdir, keep_temp=False, quick=False)
+        self._manifest = json.loads(
+            (self._tmpdir / "demo_manifest.json").read_text(encoding="utf-8")
+        )
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    def test_safety_field_present(self):
+        """ARCH-0575: top-level safety field present."""
+        self.assertIn("safety", self._manifest)
+
+    def test_safety_uses_personal_files_false(self):
+        """ARCH-0576: safety.uses_personal_files is False."""
+        self.assertIs(self._manifest["safety"]["uses_personal_files"], False)
+
+    def test_safety_uses_network_false(self):
+        """ARCH-0576: safety.uses_network is False."""
+        self.assertIs(self._manifest["safety"]["uses_network"], False)
+
+    def test_safety_uses_api_false(self):
+        """ARCH-0576: safety.uses_api is False."""
+        self.assertIs(self._manifest["safety"]["uses_api"], False)
+
+    def test_safety_writes_reports_dir_false(self):
+        """ARCH-0576: safety.writes_reports_dir is False."""
+        self.assertIs(self._manifest["safety"]["writes_reports_dir"], False)
+
+    def test_safety_opens_browser_false(self):
+        """ARCH-0576: safety.opens_browser is False."""
+        self.assertIs(self._manifest["safety"]["opens_browser"], False)
+
+
+class TestDemoManifestNoAbsPaths(unittest.TestCase):
+    """ARCH-0577/0578: manifest JSON does not contain the absolute temp dir path."""
+
+    def test_manifest_no_absolute_tempdir_path(self):
+        """ARCH-0578: manifest JSON contains no absolute temp dir path."""
+        with tempfile.TemporaryDirectory(prefix="archivio_test_abspath_") as tmp:
+            tmpdir = Path(tmp)
+            demo._run_pipeline(tmpdir, keep_temp=False, quick=False)
+            text = (tmpdir / "demo_manifest.json").read_text(encoding="utf-8")
+            # The absolute tmpdir string must not appear in the JSON values
+            self.assertNotIn(str(tmpdir), text)
+
+
+class TestDemoGeneratedFilesSorted(unittest.TestCase):
+    """ARCH-0579/0580: generated_files is sorted by path."""
+
+    def test_generated_files_sorted(self):
+        """ARCH-0580: generated_files list is sorted by path."""
+        with tempfile.TemporaryDirectory(prefix="archivio_test_sort_") as tmp:
+            tmpdir = Path(tmp)
+            demo._run_pipeline(tmpdir, keep_temp=False, quick=False)
+            manifest = json.loads(
+                (tmpdir / "demo_manifest.json").read_text(encoding="utf-8")
+            )
+        paths = [f["path"] for f in manifest.get("generated_files", [])]
+        self.assertEqual(paths, sorted(paths))
+
+
+# ── ARCH-0582: --list wording ─────────────────────────────────────────────────
+
+class TestDemoListWording(unittest.TestCase):
+    """ARCH-0581/0582: --list shows mode and declares pipeline not executed."""
+
+    def test_list_mentions_mode_full(self):
+        """ARCH-0581: --list shows full mode label."""
+        buf = io.StringIO()
+        with patch("sys.stdout", buf):
+            demo.main(["--list"])
+        self.assertIn("full", buf.getvalue().lower())
+
+    def test_list_mentions_mode_quick(self):
+        """ARCH-0581: --list --quick shows quick mode label."""
+        buf = io.StringIO()
+        with patch("sys.stdout", buf):
+            demo.main(["--quick", "--list"])
+        self.assertIn("quick", buf.getvalue().lower())
+
+    def test_list_declares_not_executed(self):
+        """ARCH-0581: --list output states pipeline not executed."""
+        buf = io.StringIO()
+        with patch("sys.stdout", buf):
+            demo.main(["--list"])
+        lower = buf.getvalue().lower()
+        self.assertTrue("not executed" in lower or "pipeline not executed" in lower)
+
+    def test_list_creates_no_manifest(self):
+        """ARCH-0582: --list creates no temp directory."""
+        tmp_before = set(Path(tempfile.gettempdir()).glob("archivio_demo_*"))
+        demo.main(["--list"])
+        tmp_after = set(Path(tempfile.gettempdir()).glob("archivio_demo_*"))
+        self.assertEqual(tmp_before, tmp_after)
+
+
+# ── ARCH-0584..0586: help wording ─────────────────────────────────────────────
+
+class TestDemoHelpWording(unittest.TestCase):
+    """ARCH-0583..0586: --help exits 0 and contains safe wording."""
+
+    @classmethod
+    def setUpClass(cls):
+        buf = io.StringIO()
+        code = 0
+        from unittest.mock import patch as _patch
+        try:
+            with _patch("sys.argv", ["run_synthetic_demo.py", "--help"]):
+                import io as _io
+                out = _io.StringIO()
+                err = _io.StringIO()
+                from contextlib import redirect_stdout as rs, redirect_stderr as re
+                with rs(out), re(err):
+                    demo.main(["--help"])
+        except SystemExit as e:
+            code = e.code if e.code is not None else 0
+            cls._help = out.getvalue() + err.getvalue()
+        else:
+            cls._help = out.getvalue() + err.getvalue()
+        cls._code = code
+
+    def test_help_exits_zero(self):
+        """ARCH-0584: --help exits 0."""
+        self.assertEqual(self._code, 0, f"--help exited {self._code}")
+
+    def test_help_mentions_synthetic(self):
+        """ARCH-0584: help mentions synthetic data."""
+        self.assertIn("synthetic", self._help.lower())
+
+    def test_help_mentions_no_personal_files(self):
+        """ARCH-0583: help mentions no personal files."""
+        lower = self._help.lower()
+        self.assertTrue("personal" in lower or "no personal" in lower)
+
+    def test_help_no_destructive_language(self):
+        """ARCH-0585: help has no destructive action language."""
+        lower = self._help.lower()
+        for phrase in ("will delete", "will move", "will rename",
+                       "cancella automaticamente", "sposta automaticamente"):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, lower)
+
+    def test_help_no_cloud_api(self):
+        """ARCH-0586: help has no cloud/API/n8n/MCP language."""
+        lower = self._help.lower()
+        for phrase in ("api_key", "access_token", "n8n", " mcp", "s3://"):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, lower)
+
+
 if __name__ == "__main__":
     unittest.main()

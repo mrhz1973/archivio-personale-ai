@@ -150,13 +150,28 @@ def _collect_generated_files(tmpdir: Path):
         rel = str(f.relative_to(tmpdir))
         ext = f.suffix.lstrip(".").lower() or "bin"
         records.append({"path": rel, "type": ext, "size": f.stat().st_size})
+    records.sort(key=lambda r: r["path"])
     return records
 
 
 def _write_manifest(tmpdir: Path, mode: str, started_at: str, finished_at: str,
                     exit_code: int, step_results: list):
     """Write demo_manifest.json inside tmpdir. Stores basename only — no absolute paths."""
+    _mode_value = f"synthetic_demo_{mode}"  # e.g. synthetic_demo_full, synthetic_demo_quick
     manifest = {
+        "metadata": {
+            "schema_version": "1.0",
+            "tool": "run_synthetic_demo.py",
+            "mode": _mode_value,
+            "safety_profile": "synthetic_temp_only_no_personal_files",
+        },
+        "safety": {
+            "uses_personal_files": False,
+            "uses_network": False,
+            "uses_api": False,
+            "writes_reports_dir": False,
+            "opens_browser": False,
+        },
         "mode": mode,
         "temp_dir": tmpdir.name,  # basename only: no personal/home path
         "started_at": started_at,
@@ -175,7 +190,23 @@ def _write_manifest(tmpdir: Path, mode: str, started_at: str, finished_at: str,
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Run the full pipeline on synthetic data (no personal files, no reports/).",
+        description=(
+            "Run the full pipeline on synthetic data. "
+            "Uses only synthetic fixture files in a temporary directory. "
+            "Never uses personal files, never writes to reports/, "
+            "never uses network or API, never opens a browser. "
+            "Temporary directory is deleted on exit unless --keep-temp."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Safety:\n"
+            "  Synthetic files only — no personal archive files touched.\n"
+            "  All output goes to a temporary directory.\n"
+            "  No writes to reports/. No network. No API. No browser.\n\n"
+            "Exit codes:\n"
+            "  0  all steps passed (or --list)\n"
+            "  1  one or more steps failed"
+        ),
     )
     parser.add_argument(
         "--keep-temp",
@@ -185,7 +216,7 @@ def main(argv=None):
     parser.add_argument(
         "--quick",
         action="store_true",
-        help="Run a minimal end-to-end pipeline (inventory → classify → inventory report).",
+        help="Run a minimal end-to-end pipeline (inventory -> classify -> inventory report).",
     )
     parser.add_argument(
         "--list",
@@ -207,7 +238,7 @@ def main(argv=None):
     if args.list:
         names = _QUICK_STEPS_NAMES if args.quick else _FULL_STEPS_NAMES
         mode = "quick" if args.quick else "full"
-        print(f"Planned steps ({mode}):")
+        print(f"Planned steps ({mode} mode) — list only, pipeline not executed:")
         for name in names:
             print(f"  {name}")
         return 0

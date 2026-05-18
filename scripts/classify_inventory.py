@@ -15,6 +15,7 @@ because of its extension.
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import PurePosixPath, Path
 from typing import Any
 
@@ -193,7 +194,7 @@ def build_category_counts(classifications: list[dict[str, Any]]) -> dict[str, in
     for item in classifications:
         category = str(item.get("category", "Misc"))
         counts[category] = counts.get(category, 0) + 1
-    return dict(sorted(counts.items(), key=lambda x: x[1], reverse=True))
+    return dict(sorted(counts.items(), key=lambda x: (-x[1], x[0])))
 
 
 def build_location_policy_counts(classifications: list[dict[str, Any]]) -> dict[str, int]:
@@ -201,7 +202,21 @@ def build_location_policy_counts(classifications: list[dict[str, Any]]) -> dict[
     for item in classifications:
         policy = str(item.get("location_policy", "classify_only"))
         counts[policy] = counts.get(policy, 0) + 1
-    return dict(sorted(counts.items(), key=lambda x: x[1], reverse=True))
+    return dict(sorted(counts.items(), key=lambda x: (-x[1], x[0])))
+
+
+def build_confidence_buckets(classifications: list[dict[str, Any]]) -> dict[str, int]:
+    """Bucket confidences: high >= 0.75, medium >= 0.55, low < 0.55."""
+    high = medium = low = 0
+    for item in classifications:
+        c = item.get("confidence", 0)
+        if c >= 0.75:
+            high += 1
+        elif c >= 0.55:
+            medium += 1
+        else:
+            low += 1
+    return {"high": high, "medium": medium, "low": low}
 
 
 def classify_inventory(data: dict[str, Any]) -> dict[str, Any]:
@@ -210,7 +225,23 @@ def classify_inventory(data: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Invalid inventory JSON: 'files' must be a list.")
 
     classifications = [classify_file(item) for item in files if isinstance(item, dict)]
+    classifications.sort(key=lambda x: x.get("relative_path", ""))
+
     low_confidence = [item for item in classifications if item.get("confidence", 0) < 0.60]
+    root_file_count = sum(1 for item in classifications if not item.get("context_bound", False))
+    context_bound_count = sum(1 for item in classifications if item.get("context_bound", False))
+
+    input_meta = data.get("metadata", {})
+    generated_at = datetime.now(tz=timezone.utc).isoformat()
+
+    metadata = {
+        "schema_version": "1.0",
+        "generated_at_iso": generated_at,
+        "tool": "classify_inventory.py",
+        "mode": "dry_run_classification",
+        "input_tool": str(input_meta.get("tool", "")),
+        "input_schema_version": str(input_meta.get("schema_version", "")),
+    }
 
     summary = {
         "source": data.get("summary", {}).get("source", ""),
@@ -218,10 +249,14 @@ def classify_inventory(data: dict[str, Any]) -> dict[str, Any]:
         "categories_count": build_category_counts(classifications),
         "location_policy_counts": build_location_policy_counts(classifications),
         "low_confidence_count": len(low_confidence),
+        "confidence_buckets": build_confidence_buckets(classifications),
+        "root_file_count": root_file_count,
+        "context_bound_count": context_bound_count,
         "dry_run_only": True,
     }
 
     return {
+        "metadata": metadata,
         "summary": summary,
         "classifications": classifications,
         "errors": [],
@@ -230,10 +265,27 @@ def classify_inventory(data: dict[str, Any]) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Rule-based dry-run classifier for Archivio Personale AI inventory files."
+        description=(
+            "Rule-based dry-run classifier for Archivio Personale AI inventory files. "
+            "Reads only the inventory JSON produced by inventory_readonly.py. "
+            "Uses only metadata and relative paths already present in the JSON. "
+            "Produces dry-run classification suggestions. "
+            "Writes only the JSON file at --output. "
+            "Never modifies, moves, renames, or deletes source files."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Safety:\n"
+            "  Input JSON is read-only. No source file is modified.\n"
+            "  All suggestions are dry-run only (dry_run_only: true in output).\n"
+            "  Only the JSON file at --output is written.\n\n"
+            "Exit codes:\n"
+            "  0  classifications written\n"
+            "  1  input file not found"
+        ),
     )
-    parser.add_argument("--input", required=True, help="Input inventory JSON path.")
-    parser.add_argument("--output", required=True, help="Output classifications JSON path.")
+    parser.add_argument("--input", required=True, help="Input inventory JSON path (read-only).")
+    parser.add_argument("--output", required=True, help="Output classifications JSON path (only file written).")
     args = parser.parse_args()
 
     input_path = Path(args.input).resolve()

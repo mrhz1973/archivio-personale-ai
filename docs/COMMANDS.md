@@ -112,6 +112,13 @@ python scripts/generate_inventory_report.py --input reports/inventory.json --out
 
 ## Dry-run classification example
 
+`scripts/classify_inventory.py` reads only the inventory JSON, uses metadata and relative paths already present in the JSON, produces dry-run classification suggestions, preserves context of files in subfolders (`keep_in_place`), and never acts on personal files. Writes only the JSON at `--output`.
+
+**JSON output format:**
+- `metadata` — `schema_version`, `generated_at_iso`, `tool`, `mode` (`dry_run_classification`), `input_tool`, `input_schema_version`
+- `summary` — `categories_count`, `location_policy_counts`, `confidence_buckets` (high/medium/low), `root_file_count`, `context_bound_count`, `low_confidence_count`
+- `classifications` — list sorted by `relative_path`; each entry includes `dry_run_only: true`
+
 ```powershell
 python scripts/classify_inventory.py --input reports/inventory.json --output reports/classifications.json
 ```

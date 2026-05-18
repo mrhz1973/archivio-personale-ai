@@ -1,13 +1,19 @@
 """
-Validate generated report HTML files structurally without opening a browser.
-Standard library only. Read-only, non-destructive.
+Read-only structural validator for generated report HTML files.
+
+This script is strictly read-only: it reads existing HTML files, validates their
+structure and safety wording, and prints results to stdout. It never opens a
+browser, never modifies or creates files, never creates directories, and never
+uses the network or external APIs. It does not write any report.
+
+Standard library only. Non-destructive.
 
 Usage:
     python scripts/validate_reports.py                        # check default reports
-    python scripts/validate_reports.py report.html           # explicit file(s)
-    python scripts/validate_reports.py reports/              # all *.html in directory (recursive)
-    python scripts/validate_reports.py reports/ extra.html   # mix
-    python scripts/validate_reports.py --help                # show this help
+    python scripts/validate_reports.py report.html            # explicit file(s)
+    python scripts/validate_reports.py reports/               # all *.html in directory (recursive)
+    python scripts/validate_reports.py reports/ extra.html    # mix
+    python scripts/validate_reports.py --help                 # show this help
 
 Exit codes:
     0 — no errors
@@ -22,8 +28,20 @@ import sys
 _HELP = """\
 Usage: python scripts/validate_reports.py [PATH ...] [--help]
 
+What this validator does:
+  - Reads existing HTML reports (read-only).
+  - Validates HTML structure and Italian safety wording.
+  - Prints per-file results and a final summary to stdout.
+
+What this validator does NOT do:
+  - Does not open a browser.
+  - Does not modify, create, or delete files.
+  - Does not create directories or write any report.
+  - Does not use the network, cloud, or external APIs.
+
+Arguments:
   (no args)          Check default reports (inventory, classification, action plan).
-  PATH               One or more .html files or directories (recursive).
+  PATH               One or more .html files or directories (recursive, deterministic).
   -h, --help         Show this message and exit.
 
 Exit codes:
@@ -38,32 +56,44 @@ DEFAULT_PATHS = [
     "reports/action_plan_report.html",
 ]
 
-# Presence of any of these (case-insensitive) satisfies review-only wording check.
+# Presence of any of these (case-insensitive) satisfies the review-only wording
+# check. Variants in use across the Italian HTML reports.
 _REVIEW_ONLY_PHRASES = [
     "solo revisione",
-    "nessuna cancellazione",
     "review only",
+    "review-only",
+    "nessuna cancellazione",
+    "nessuna cancellazione proposta",
+    "nessuna cancellazione automatica",
+    "solo suggerimenti",
     "no delete",
 ]
 
 # Dangerous patterns: suggest automatic destructive action.
-# Tuple: (compiled regex, human description)
+# Tuple: (compiled regex, human description). Each category has its own entry
+# so callers (and tests) can verify they are detected independently.
 _DANGEROUS_PATTERNS = [
     (re.compile(r"cancellazione\s+automatica", re.IGNORECASE), "cancellazione automatica"),
     (re.compile(r"eliminazione\s+automatica", re.IGNORECASE), "eliminazione automatica"),
     (re.compile(r"spostamento\s+automatico", re.IGNORECASE), "spostamento automatico"),
     (re.compile(r"rinomina\s+automatica", re.IGNORECASE), "rinomina automatica"),
-    (re.compile(r"(delete|move|rename)\s+automatically", re.IGNORECASE), "auto destructive action (EN)"),
+    (re.compile(r"delete\s+automatically", re.IGNORECASE), "delete automatically"),
+    (re.compile(r"move\s+automatically", re.IGNORECASE), "move automatically"),
+    (re.compile(r"rename\s+automatically", re.IGNORECASE), "rename automatically"),
     (re.compile(r"safe\s+to\s+delete", re.IGNORECASE), "safe to delete"),
 ]
 
 # Negation words that, when appearing within 80 chars before a dangerous match,
 # indicate the phrasing is safe (e.g. "nessuna cancellazione automatica").
 _NEGATION = re.compile(r"\b(nessuna?|no|non|senza|not|without)\b", re.IGNORECASE)
+_NEGATION_WINDOW = 80
+
+# Robust check for lang="it" / lang='it' (case-insensitive, optional whitespace).
+_LANG_IT = re.compile(r"""lang\s*=\s*['"]\s*it\s*['"]""", re.IGNORECASE)
 
 
 def _is_negated(content, match):
-    prefix = content[max(0, match.start() - 80) : match.start()]
+    prefix = content[max(0, match.start() - _NEGATION_WINDOW) : match.start()]
     return bool(_NEGATION.search(prefix))
 
 
@@ -83,9 +113,20 @@ def _has_review_only_wording(content):
     return any(phrase in lower for phrase in _REVIEW_ONLY_PHRASES)
 
 
+def _has_lang_it(content):
+    """Robust, case-insensitive check for lang attribute equal to 'it'."""
+    return bool(_LANG_IT.search(content))
+
+
+def _has_html_marker(content):
+    """Accept either <!DOCTYPE html> or an <html ...> tag (case-insensitive)."""
+    lower = content.lower()
+    return "<html" in lower or "<!doctype html" in lower
+
+
 def validate_file(path):
     """
-    Validate a single HTML file.
+    Validate a single HTML file (read-only).
     Returns (status, messages) where status is 'OK', 'WARN', or 'FAIL'.
     """
     try:
@@ -100,11 +141,11 @@ def validate_file(path):
     status = "OK"
     messages = []
 
-    if "<html" not in content.lower():
-        messages.append("missing <html element")
+    if not _has_html_marker(content):
+        messages.append("missing <html element or <!DOCTYPE html>")
         status = "FAIL"
 
-    if 'lang="it"' not in content and "lang='it'" not in content:
+    if not _has_lang_it(content):
         messages.append('missing lang="it"')
         status = "FAIL"
 
@@ -127,12 +168,27 @@ def validate_file(path):
     return status, messages
 
 
+def _walk_html_files(directory):
+    """Yield HTML files under directory in a stable, sorted order."""
+    collected = []
+    for dirpath, dirs, filenames in os.walk(directory):
+        dirs.sort()
+        for fn in sorted(filenames):
+            if fn.lower().endswith(".html"):
+                collected.append(os.path.join(dirpath, fn))
+    return collected
+
+
 def _collect_paths(argv):
     """
     Parse CLI arguments into a list of (path, is_explicit) tuples.
     Returns (entries, empty_dirs, error_message).
     empty_dirs lists directories that were found but contained no HTML files.
     error_message is non-None when CLI is invalid or an explicit path is missing.
+
+    Ordering: directory contents are sorted deterministically (filenames and
+    subdirs alphabetically). Multiple arguments are processed in the order they
+    were passed; repeated calls with the same argv produce identical output.
     """
     if not argv:
         return [(p, False) for p in DEFAULT_PATHS], [], None
@@ -143,20 +199,34 @@ def _collect_paths(argv):
         if os.path.isfile(arg):
             entries.append((arg, True))
         elif os.path.isdir(arg):
-            found = []
-            for dirpath, _dirs, filenames in os.walk(arg):
-                _dirs.sort()
-                for fn in sorted(filenames):
-                    if fn.lower().endswith(".html"):
-                        found.append((os.path.join(dirpath, fn), True))
+            found = _walk_html_files(arg)
             if found:
-                entries.extend(found)
+                entries.extend((p, True) for p in found)
             else:
                 empty_dirs.append(arg)
         else:
             return [], [], f"path not found: '{arg}'"
 
     return entries, empty_dirs, None
+
+
+def _print_summary(total, ok, warnings, errors, error_list):
+    """Print the final summary block. Always called, both on OK and FAIL."""
+    print()
+    print(f"Checked: {total}  OK: {ok}  Warnings: {warnings}  Errors: {errors}")
+
+    if error_list:
+        print()
+        print("Errors:")
+        for path, msgs in error_list:
+            print(f"  {path}")
+            for m in msgs:
+                print(f"    - {m}")
+        print()
+        print("Validation FAILED.")
+    else:
+        print()
+        print("Validation passed.")
 
 
 def main(argv=None):
@@ -204,20 +274,8 @@ def main(argv=None):
             for m in messages:
                 print(f"        - {m}")
 
-    print()
-    print(f"Checked: {total}  OK: {ok}  Warnings: {warnings}  Errors: {errors}")
-
-    if error_list:
-        print("\nErrors:")
-        for path, msgs in error_list:
-            print(f"  {path}")
-            for m in msgs:
-                print(f"    - {m}")
-        print("\nValidation FAILED.")
-        return 1
-
-    print("\nValidation passed.")
-    return 0
+    _print_summary(total, ok, warnings, errors, error_list)
+    return 1 if error_list else 0
 
 
 if __name__ == "__main__":

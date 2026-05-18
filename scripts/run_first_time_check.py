@@ -1,11 +1,16 @@
 """
 ARCH-0335..ARCH-0344 — First-run readiness check.
-Standard library only. No network, no personal files, no reports/ reads.
 
-Verifies:
+Verifies local prerequisites only:
   - Python version >= 3.8
   - Expected scripts exist: run_validations.py, run_synthetic_demo.py
   - Expected docs exist: docs/COMMANDS.md, README.md
+
+Safety constraints:
+  - Standard library only; no network, no external services.
+  - Does not read personal files.
+  - Does not read reports/.
+  - Does not modify any file.
 
 Exit codes:
   0   all checks passed (or --list)
@@ -56,7 +61,10 @@ _CHECKS = [
 
 def main():
     parser = argparse.ArgumentParser(
-        description="First-run readiness check. Verifies Python version, required scripts, and docs."
+        description=(
+            "First-run readiness check. Verifies Python version, required scripts, and docs. "
+            "Local only — no network, no external services, no personal files, no reports/ reads, no file modification."
+        )
     )
     parser.add_argument(
         "--list",
@@ -71,8 +79,9 @@ def main():
     args = parser.parse_args()
 
     if args.list:
+        print("Planned first-run checks (--list does not run checks):")
         for label, _ in _CHECKS:
-            print(label)
+            print(f"  {label}")
         return 0
 
     ok_count = 0
@@ -94,7 +103,8 @@ def main():
     parts = [f"{total} checked", f"{ok_count} OK"]
     if failures:
         parts.append(f"{len(failures)} failed")
-    print(f"Summary: {', '.join(parts)}")
+    status = "FAILED" if failures else "passed"
+    print(f"Summary: {', '.join(parts)} — {status}")
 
     if failures:
         print(f"Failed: {', '.join(failures)}")

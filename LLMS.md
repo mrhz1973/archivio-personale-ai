@@ -57,6 +57,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0565..ARCH-0589 | Batch 27A — synthetic demo manifest metadata and safety alignment | Closed — commit `e5c3383` |
 | ARCH-0590..ARCH-0629 | Batch 27B — report validator CLI safety and Italian invariants | Closed — commit `5513fec` |
 | ARCH-0630..ARCH-0649 | Batch 28A — validation runner safety wording and list-mode hardening | Closed — commit `75732aa` |
+| ARCH-0650..ARCH-0669 | Batch 28B — first-run readiness check safety and output clarity | Closed — commit pending |
 
 ## Current phase
 

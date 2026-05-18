@@ -27,6 +27,8 @@ Before running other commands, verify environment readiness:
 python .\scripts\run_first_time_check.py
 ```
 
+`run_first_time_check.py` verifies Python, required scripts, and expected docs. It is local-only, read-only, and does not use network or API, does not read personal files, does not read `reports/`, and does not modify any file.
+
 Checks:
 - Python >= 3.8
 - Expected scripts exist: `run_validations.py`, `run_synthetic_demo.py`

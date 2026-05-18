@@ -59,6 +59,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0630..ARCH-0649 | Batch 28A — validation runner safety wording and list-mode hardening | Closed — commit `75732aa` |
 | ARCH-0650..ARCH-0669 | Batch 28B — first-run readiness check safety and output clarity | Closed — commit `dccd943` |
 | ARCH-0670..ARCH-0689 | Batch 28C — v1 quickstart docs and operator command flow | Closed — commit `0206f68` |
+| ARCH-0690..ARCH-0724 | Batch 29A — v1 readiness checklist and final safety documentation alignment | Closed — commit pending |
 
 ## Current phase
 

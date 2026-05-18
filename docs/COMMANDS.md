@@ -25,6 +25,8 @@ Ordine operativo suggerito per un primo utilizzo sicuro:
 
 Nessun passo esegue operazioni di spostamento, rinomina o cancellazione. Nessun report viene aperto automaticamente.
 
+Per la checklist completa di prontezza v1 (componenti implementati, criteri di stop, definizione di "v1 pronta"), vedi `docs/V1_READINESS.md`.
+
 ## Local shell policy (Windows)
 
 For user-local execution, use **PowerShell** syntax and examples.
@@ -66,6 +68,8 @@ Checks:
 Exit codes: `0` all checks passed (or `--list`), `1` one or more checks failed.
 
 ## Validation
+
+Per i criteri di validazione completi e la definizione di "v1 pronta", vedi `docs/V1_READINESS.md`.
 
 ```powershell
 python -m py_compile scripts/inventory_readonly.py scripts/generate_inventory_report.py scripts/classify_inventory.py scripts/generate_classification_report.py scripts/generate_action_plan.py scripts/generate_action_plan_report.py

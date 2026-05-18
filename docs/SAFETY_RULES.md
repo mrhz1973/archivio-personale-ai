@@ -38,3 +38,7 @@ A controlled move phase may be introduced only if all conditions are satisfied:
 4. rollback plan defined before execution.
 
 No move, rename, or delete operation shall ever be automatic or unattended.
+
+## V1 readiness checklist
+
+For the complete v1 readiness checklist (implemented components, stop criteria, definition of "v1 ready"), see `docs/V1_READINESS.md`.

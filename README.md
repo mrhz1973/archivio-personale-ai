@@ -94,6 +94,10 @@ python -m py_compile scripts/inventory_readonly.py scripts/generate_inventory_re
 python -m unittest discover -s tests -v
 ```
 
+## V1 readiness
+
+`docs/V1_READINESS.md` è il riferimento per capire se la v1 è pronta all'uso locale: contiene la checklist dei componenti implementati, i criteri di stop, la definizione di "v1 pronta" e i limiti intenzionali del progetto.
+
 ## Safety
 
 See `docs/SAFETY_RULES.md`.

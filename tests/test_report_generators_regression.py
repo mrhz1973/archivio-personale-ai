@@ -242,7 +242,7 @@ class TestClassificationReportContent(TmpDirMixin):
         self.assertIn("Report Classificazione", self._html)
 
     def test_dry_run_notice_present(self):
-        self.assertIn("Solo dry-run", self._html)
+        self.assertIn("Solo revisione", self._html)
 
     def test_validate_reports_passes(self):
         code = vr.main([self._path])

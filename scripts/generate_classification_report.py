@@ -22,6 +22,7 @@ def fmt_size(size_bytes: int) -> str:
 
 
 def build_html(data: dict) -> str:
+    meta = data.get("metadata") or {}
     summary = data.get("summary", {})
     classifications = data.get("classifications", [])
     category_counts = summary.get("categories_count", {})
@@ -81,6 +82,52 @@ def build_html(data: dict) -> str:
             "</tr>\n"
         )
 
+    metadata_section = ""
+    if meta:
+        mode_raw = str(meta.get("mode", ""))
+        mode_label = ("Modalità: classificazione dry-run"
+                      if mode_raw == "dry_run_classification" else html.escape(mode_raw))
+        meta_rows = ""
+        for label, key in [
+            ("Versione schema", "schema_version"),
+            ("Generato il", "generated_at_iso"),
+            ("Strumento", "tool"),
+            ("Strumento input", "input_tool"),
+            ("Schema input", "input_schema_version"),
+        ]:
+            val = meta.get(key)
+            if val is not None and str(val):
+                meta_rows += f"<tr><td>{label}</td><td>{html.escape(str(val))}</td></tr>\n"
+        if mode_raw:
+            meta_rows += f"<tr><td>Modalità</td><td>{mode_label}</td></tr>\n"
+        metadata_section = f"""
+  <h2>Informazioni classificazione</h2>
+  <table>
+    <thead><tr><th>Campo</th><th>Valore</th></tr></thead>
+    <tbody>{meta_rows}</tbody>
+  </table>
+"""
+
+    buckets = summary.get("confidence_buckets")
+    confidence_stats = ""
+    if buckets and isinstance(buckets, dict):
+        h = int(buckets.get("high", 0) or 0)
+        m = int(buckets.get("medium", 0) or 0)
+        lo = int(buckets.get("low", 0) or 0)
+        confidence_stats = (
+            f'<div class="stat">Confidenza alta<span>{h}</span></div>'
+            f'<div class="stat">Confidenza media<span>{m}</span></div>'
+            f'<div class="stat">Confidenza bassa<span>{lo}</span></div>'
+        )
+
+    root_file_count = summary.get("root_file_count")
+    context_bound_count = summary.get("context_bound_count")
+    extra_stats = ""
+    if root_file_count is not None:
+        extra_stats += f'<div class="stat">File in radice<span>{int(root_file_count)}</span></div>'
+    if context_bound_count is not None:
+        extra_stats += f'<div class="stat">File context-bound<span>{int(context_bound_count)}</span></div>'
+
     low_section = ""
     if low_rows:
         low_section = f"""
@@ -106,20 +153,27 @@ def build_html(data: dict) -> str:
     tr:nth-child(even) {{ background: #fafafa; }}
     .stat {{ display: inline-block; margin: 0 2em 1em 0; }}
     .stat span {{ display: block; font-size: 2em; font-weight: bold; color: #2255aa; }}
-    .warning {{ padding: 1em; background: #fff6d8; border: 1px solid #e5c45b; }}
+    .safety-note {{ background: #f8f8e8; border: 1px solid #cccc88; padding: 0.7em 1em; margin: 1em 0; border-radius: 4px; font-size: 0.95em; }}
   </style>
 </head>
 <body>
   <h1>Archivio Personale AI — Report Classificazione</h1>
   <p><strong>Origine:</strong> {source}</p>
-  <p class="warning"><strong>Solo dry-run:</strong> questo report contiene solo suggerimenti. Nessun file è stato spostato, rinominato, cancellato, sovrascritto o riorganizzato. I file già dentro cartelle esistenti sono marcati <strong>keep_in_place</strong> per preservare il contesto.</p>
 
+  <div class="safety-note">
+    <strong>Nota:</strong> Solo revisione. Report statico, classificazione dry-run.
+    Nessun file viene spostato, cancellato o rinominato da questo script.
+    I file già dentro cartelle esistenti sono marcati <strong>keep_in_place</strong> per preservare il contesto.
+  </div>
+{metadata_section}
   <h2>Riepilogo</h2>
   <div>
     <div class="stat">File totali<span>{total_files}</span></div>
     <div class="stat">Mantieni nella posizione attuale<span>{keep_in_place_count}</span></div>
     <div class="stat">Solo classificazione (radice)<span>{classify_only_count}</span></div>
     <div class="stat">Bassa confidenza<span>{low_confidence_count}</span></div>
+    {confidence_stats}
+    {extra_stats}
   </div>
 
   <h2>Politica posizione</h2>
@@ -148,10 +202,26 @@ def build_html(data: dict) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate a static HTML report from classifications JSON."
+        description=(
+            "Generate a static Italian HTML report from a classifications JSON. "
+            "Reads the classification JSON produced by classify_inventory.py. "
+            "Produces a static review-only HTML report. "
+            "Writes only the HTML file at --output. "
+            "Never modifies, moves, renames, or deletes source files."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Safety:\n"
+            "  Input JSON is read-only. No source file is modified.\n"
+            "  The HTML report is static and review-only.\n"
+            "  Only the HTML file at --output is written.\n\n"
+            "Exit codes:\n"
+            "  0  report written\n"
+            "  1  input file not found"
+        ),
     )
-    parser.add_argument("--input", required=True, help="Classifications JSON file path.")
-    parser.add_argument("--output", required=True, help="Output HTML file path.")
+    parser.add_argument("--input", required=True, help="Classifications JSON file path (read-only input).")
+    parser.add_argument("--output", required=True, help="Output HTML file path (only file written).")
     args = parser.parse_args()
 
     input_path = Path(args.input).resolve()

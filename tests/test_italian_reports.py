@@ -136,8 +136,8 @@ class TestClassificationReportItalian(unittest.TestCase):
         self.assertIn("Report Classificazione", self.html)
 
     def test_safety_wording_italian(self):
-        self.assertIn("Solo dry-run", self.html)
-        self.assertIn("Nessun file è stato spostato", self.html)
+        self.assertIn("Solo revisione", self.html)
+        self.assertIn("Nessun file viene spostato", self.html)
 
     def test_italian_headings(self):
         self.assertIn("Riepilogo", self.html)

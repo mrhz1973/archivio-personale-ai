@@ -125,6 +125,8 @@ python scripts/classify_inventory.py --input reports/inventory.json --output rep
 
 ## Classification HTML report example
 
+`scripts/generate_classification_report.py` reads the classification JSON, generates a static Italian HTML report showing metadata, summary (with `confidence_buckets`, `root_file_count`, `context_bound_count`), category counts, location-policy counts, and a sample of classifications. Report is review-only; never acts on personal files.
+
 ```powershell
 python scripts/generate_classification_report.py --input reports/classifications.json --output reports/classification_report.html
 ```

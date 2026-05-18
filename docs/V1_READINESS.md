@@ -11,6 +11,8 @@ Archivio Personale AI v1 è un helper **local-first**, **review-only** e **safet
 
 ## Principio base
 
+La v1 è una **baseline locale review-only**: non è un sistema di automazione sui file personali e non introduce operazioni automatiche di alcun tipo.
+
 La v1 aiuta a **capire e revisionare** l'archivio, non ad agire automaticamente sui file.
 
 Nessuno script della v1 sposta, rinomina, cancella o sovrascrive file personali. Qualunque decisione operativa resta interamente all'utente.
@@ -129,7 +131,7 @@ Fermarsi immediatamente se compaiono:
 
 Questa checklist è usata come **release-candidate checklist locale**: soddisfarla conferma che la pipeline locale è pronta per l'uso review-only. Non costituisce una garanzia di operazioni automatiche né un'approvazione implicita di passi che esulano dalla natura read-only/dry-run del progetto.
 
-La v1 è pronta per uso locale review-only quando:
+La v1 è pronta quando le validazioni locali passano e il workspace è pulito. Nello specifico, è pronta per uso locale review-only quando:
 
 - [ ] Workspace Git pulito (`git status --short` vuoto)
 - [ ] Suite test passata (`python -m unittest discover`)
@@ -137,6 +139,8 @@ La v1 è pronta per uso locale review-only quando:
 - [ ] README.md e docs/COMMANDS.md coerenti con questa checklist
 - [ ] Nessun report né file personale committato nel repository
 - [ ] LLMS.md aggiornato con l'ultimo batch e commit hash
+
+**Attenzione**: "v1 pronta" non autorizza a spostare, rinominare o cancellare file personali. Ogni operazione sui file reali resta manuale e richiede supervisione esplicita dell'utente.
 
 ## Cosa controllare prima di lavorare su file reali
 

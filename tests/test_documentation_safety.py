@@ -464,5 +464,143 @@ class TestPowerShellExamplesForWindows(unittest.TestCase):
                       "docs/V1_READINESS.md must contain powershell code blocks")
 
 
+# ── ARCH-0812..0820: LLMS.md v1 baseline and phase invariants ────────────────
+
+def _llms_text() -> str:
+    return _LLMS_PATH.read_text(encoding="utf-8")
+
+
+class TestLLMSV1BaselinePhase(unittest.TestCase):
+
+    def test_llms_v1_local_review_only_phase(self):
+        """ARCH-0812: LLMS.md must reflect the v1 local review-only baseline phase."""
+        lower = _llms_text().lower()
+        self.assertTrue(
+            "v1 local review-only" in lower
+            or ("v1" in lower and "local" in lower and "review-only" in lower),
+            "LLMS.md must contain 'v1 local review-only' or equivalent"
+        )
+
+
+class TestLLMSImplementedNotImplementedBlocks(unittest.TestCase):
+
+    def test_llms_has_implemented_block(self):
+        """ARCH-0813"""
+        self.assertIn("Implemented:", _llms_text(),
+                      "LLMS.md must have an 'Implemented:' block")
+
+    def test_llms_has_not_implemented_block(self):
+        """ARCH-0813"""
+        self.assertIn("Not implemented:", _llms_text(),
+                      "LLMS.md must have a 'Not implemented:' block")
+
+
+class TestLLMSReviewOnlyReference(unittest.TestCase):
+
+    def test_llms_mentions_review_only(self):
+        """ARCH-0814: LLMS.md must contain at least one 'review-only' reference."""
+        self.assertIn("review-only", _llms_text().lower(),
+                      "LLMS.md must contain at least one reference to 'review-only'")
+
+
+class TestLLMSMoveRenameDeleteProhibition(unittest.TestCase):
+
+    def test_llms_prohibits_destructive_ops(self):
+        """ARCH-0815: LLMS.md must reference prohibition on real move/rename/delete."""
+        lower = _llms_text().lower()
+        self.assertTrue(
+            "no automatic move" in lower
+            or "no move" in lower
+            or "move/rename/delete" in lower
+            or "real move" in lower,
+            "LLMS.md must reference the prohibition on real move/rename/delete"
+        )
+
+
+class TestV1BaselineMentionedInReadmeAndV1(unittest.TestCase):
+
+    def test_readme_mentions_v1_baseline_or_checklist(self):
+        """ARCH-0816"""
+        lower = _README.lower()
+        self.assertTrue(
+            "v1_readiness" in lower
+            or "v1 readiness" in lower
+            or "checklist" in lower
+            or "release-candidate" in lower
+            or "baseline" in lower,
+            "README.md must mention the v1 baseline or checklist"
+        )
+
+    def test_v1_readiness_mentions_baseline_or_checklist(self):
+        """ARCH-0816"""
+        lower = _V1.lower()
+        self.assertTrue(
+            "baseline" in lower
+            or "checklist" in lower
+            or "release-candidate" in lower,
+            "docs/V1_READINESS.md must mention the v1 baseline or checklist"
+        )
+
+
+class TestCommandsReportsNotCommitted(unittest.TestCase):
+
+    def test_commands_states_reports_not_committed(self):
+        """ARCH-0817: COMMANDS.md must state that reports/ outputs must not be committed."""
+        lower = _COMMANDS.lower()
+        self.assertTrue(
+            "non devono essere committati" in lower
+            or "not be committed" in lower
+            or "non committati" in lower
+            or "do not commit" in lower
+            or "must not be committed" in lower
+            or "non va committato" in lower,
+            "docs/COMMANDS.md must state that reports/ outputs must not be committed"
+        )
+
+
+class TestLLMSNoNewDangerousInstructions(unittest.TestCase):
+    """ARCH-0818/0819/0820: LLMS.md must not introduce auto-open, cloud API,
+    or move/rename/delete as positive instructions."""
+
+    def test_llms_no_auto_open_instruction(self):
+        """ARCH-0818"""
+        text = _llms_text()
+        pattern = re.compile(r"\bstart\s+\S.*\.(html|json|pdf)", re.IGNORECASE)
+        for m in pattern.finditer(text):
+            self.assertTrue(
+                _negated_context(text, m),
+                "LLMS.md: 'start <file>' found outside a negated context"
+            )
+        self.assertNotIn("os.startfile", text,
+                         "LLMS.md must not reference os.startfile")
+
+    def test_llms_no_cloud_api_on_personal_content(self):
+        """ARCH-0819"""
+        text = _llms_text()
+        pattern = re.compile(
+            r"(?:cloud|api).{0,60}(?:personal|personali).{0,60}(?:content|contenut)",
+            re.IGNORECASE | re.DOTALL
+        )
+        for m in pattern.finditer(text):
+            self.assertTrue(
+                _negated_context(text, m),
+                "LLMS.md: cloud/API on personal contents found outside negated context"
+            )
+
+    def test_llms_no_operative_move_rename_delete(self):
+        """ARCH-0820"""
+        text = _llms_text()
+        for pat_str, label in [
+            (r"\bmove reali", "move reali"),
+            (r"\brinomina reale", "rinomina reale"),
+            (r"\bcancellazione reale", "cancellazione reale"),
+        ]:
+            for m in re.finditer(pat_str, text, re.IGNORECASE):
+                self.assertTrue(
+                    _negated_context(text, m),
+                    f"LLMS.md: '{label}' found outside a negated/forbidden context"
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

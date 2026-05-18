@@ -19,7 +19,7 @@ Un helper locale, sicuro e review-only per l'inventario e la classificazione dry
 
 ## Current status
 
-- Phase: read-only inventory + rule-based dry-run classification + Italian HTML reports.
+- Phase: **v1 local review-only baseline** — inventory, dry-run classification, reports and validation.
 - Mode: dry-run / read-only / review-only.
 - Forbidden operations: move, rename, delete, overwrite, or automatic folder reorganization.
 - Classification reads only `reports/inventory.json` (metadata flow), not source file contents.
@@ -96,7 +96,7 @@ python -m unittest discover -s tests -v
 
 ## V1 readiness
 
-`docs/V1_READINESS.md` è il riferimento per capire se la v1 è pronta all'uso locale: contiene la checklist dei componenti implementati, i criteri di stop, la definizione di "v1 pronta" e i limiti intenzionali del progetto. Usala come **release-candidate checklist locale** prima di eseguire la pipeline su un archivio reale.
+`docs/V1_READINESS.md` è il riferimento per la chiusura v1: contiene la checklist dei componenti implementati, i criteri di stop, la definizione di "v1 pronta" e i limiti intenzionali del progetto. Usala come **release-candidate checklist locale** prima di eseguire la pipeline su un archivio reale.
 
 ## Safety
 

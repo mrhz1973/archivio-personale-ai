@@ -62,10 +62,11 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0690..ARCH-0724 | Batch 29A — v1 readiness checklist and final safety documentation alignment | Closed — commit `4edda80` |
 | ARCH-0725..ARCH-0759 | Batch 29B — documentation safety regression tests and v1 consistency checks | Closed — commit `7b7966e` |
 | ARCH-0760..ARCH-0794 | Batch 30A — v1 release-candidate validation and status alignment | Closed — commit `554f54e` |
+| ARCH-0795..ARCH-0829 | Batch 30B — v1 local review-only baseline closure and handoff alignment | Closed — commit pending |
 
 ## Current phase
 
-**Dry-run inventory + rule-based classification baseline.**
+**V1 local review-only baseline — inventory, dry-run classification, reports and validation.**
 
 Implemented:
 
@@ -74,7 +75,12 @@ Implemented:
 - rule-based dry-run classifier: `scripts/classify_inventory.py`;
 - static HTML classification report generator: `scripts/generate_classification_report.py`;
 - context preservation policy: files already inside existing folders are marked `keep_in_place`;
-- review-only action plan for root sort candidates and exact duplicate groups.
+- review-only action plan for root sort candidates and exact duplicate groups;
+- first-run readiness check: `scripts/run_first_time_check.py`;
+- local validation runner: `scripts/run_validations.py`;
+- synthetic end-to-end demo: `scripts/run_synthetic_demo.py`;
+- documentation safety regression tests: `tests/test_documentation_safety.py`;
+- V1 readiness checklist: `docs/V1_READINESS.md`.
 
 Not implemented:
 

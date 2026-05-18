@@ -61,7 +61,7 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 | ARCH-0670..ARCH-0689 | Batch 28C — v1 quickstart docs and operator command flow | Closed — commit `0206f68` |
 | ARCH-0690..ARCH-0724 | Batch 29A — v1 readiness checklist and final safety documentation alignment | Closed — commit `4edda80` |
 | ARCH-0725..ARCH-0759 | Batch 29B — documentation safety regression tests and v1 consistency checks | Closed — commit `7b7966e` |
-| ARCH-0760..ARCH-0794 | Batch 30A — v1 release-candidate validation and status alignment | Closed — commit pending |
+| ARCH-0760..ARCH-0794 | Batch 30A — v1 release-candidate validation and status alignment | Closed — commit `554f54e` |
 
 ## Current phase
 

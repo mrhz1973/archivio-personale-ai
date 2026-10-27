@@ -4,7 +4,7 @@ Safe pipeline: read-only inventory to dry-run classification. No destructive act
 
 ## Operational guardrails
 
-- One active implementer only: Claude Code (primary) or Codex (backup).
+- Primary orchestrator and implementer: ChatGPT, using only currently available and authorized tools. Cursor support requires explicit user delegation.
 - Before switching implementer: verify workspace clean/aligned.
 - User local environment is Windows: local command syntax is PowerShell.
 - Never auto-open reports with `start`, `Invoke-Item`, or equivalents unless explicitly requested.

@@ -31,7 +31,7 @@ The source archive must stay outside the repo (for example `C:\Archivio_Test`).
 
 ## Operational guardrails
 
-- One active implementer at a time: Claude Code (primary) or Codex (backup).
+- ChatGPT è l'orchestratore e implementatore principale tramite strumenti disponibili; Cursor è un supporto eventuale, solo su incarico esplicito dell'utente.
 - Before implementer switch: verify workspace clean/aligned.
 - Local user environment is Windows: use PowerShell for local commands.
 

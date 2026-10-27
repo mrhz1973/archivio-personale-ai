@@ -8,9 +8,8 @@ Primary target: local PC/internal HDD. Future target: Google Drive only when ava
 
 ## Roles
 
-- **ChatGPT web**: orchestrator and advisor.
-- **Claude Code**: primary local implementer when available.
-- **Codex web**: backup implementer when Claude has finished tokens.
+- **ChatGPT**: primary orchestrator and implementer, using only directly available and authorized tools.
+- **Cursor**: optional supporting implementer, only when the user explicitly delegates a task and workspace safety is verified.
 - **GitHub repository**: source of truth for code and project rules only, never for personal files.
 
 ## Task history
@@ -97,7 +96,7 @@ Before each operational reply, ChatGPT checks silently:
 1. one operational step only;
 2. latest output/screenshot has been read;
 3. wait for output before continuing;
-4. only one active implementer (Claude or Codex);
+4. ChatGPT acts directly; Cursor is optional only with explicit user authorization;
 5. repo clean/aligned or explicitly to verify;
 6. only authorized files/areas;
 7. real gates: move, rename, delete, API, cloud, n8n, MCP, installs, secrets;
@@ -106,25 +105,13 @@ Before each operational reply, ChatGPT checks silently:
 
 Do not print “priorità controllate” (or equivalent checklist confirmations) to the user.
 
-## Implementer switch policy (Claude/Codex)
+## Responsibility and optional Cursor handoff
 
-- Only one implementer active at a time.
-- Prefer Claude Code as primary implementer.
-- Use Codex web only as backup when Claude is unavailable/out of tokens.
-- Before switching implementer, verify workspace clean/aligned.
-
-## Codex guardrails
-
-Codex must follow the same safety model as Claude:
-
-- work only on authorized repository code/docs;
-- never touch personal files;
-- no cloud API processing for personal content;
-- no n8n runtime activation;
-- no MCP/filesystem agent workflows;
-- no dependency installs unless explicitly approved.
-
-Codex may use temporary work branches, but the base must be a verified remote commit.
+- ChatGPT is the primary orchestrator and implementer. Do not assume an external CLI or agent exists.
+- Cursor is optional supporting tooling, only when explicitly delegated by the user.
+- Before any Cursor handoff, verify repository root, authorized branch, clean/aligned workspace and read-only boundaries.
+- Do not modify personal files, call cloud AI APIs for personal content, activate n8n or filesystem agents, or install dependencies without the relevant explicit gate.
+- Direct GitHub edits require an isolated branch and verified diff. Missing local test or status evidence must be reported as NOT_CHECKED.
 
 ## Windows local execution policy
 
@@ -168,21 +155,11 @@ When updating existing documents, preserve all useful operational content alread
 
 Do not remove or overwrite existing content unless explicitly requested. Prefer targeted edits over broad rewrites. If a section appears duplicated, note it in the task summary instead of deleting it.
 
-## Claude Code settings checklist (orchestrator)
+## ChatGPT execution checklist (orchestrator)
 
-Before giving an operational prompt to Claude Code, ChatGPT orchestrator should state, when relevant:
+Before every operational action, verify: task mode (PLAN / CODE / DEBUG), repository and remote branch, latest available evidence, allowed and forbidden paths, and whether a real human gate applies. Work directly with available tools and do not claim local terminal or computer access that the session does not provide.
 
-- Active implementer: Claude Code; Codex stopped.
-- Mode: Code (modifying files) or Plan (analysis/planning only, no edits).
-- Claude model selected, if visible in the interface.
-- Effort / thinking / reasoning level, if visible.
-- Expected branch and repo state (branch name, HEAD commit).
-- Workspace: clean/aligned or verify first.
-- Authorized files and forbidden files for the task.
-- Whether the task requires a commit or is validation-only.
-- Whether real gates exist.
-
-If a setting is not visible or not controllable, do not invent it — declare only what is actually known. If the task is implementation, prefer Code mode. If the task is analysis or audit without changes, prefer Plan mode.
+If the user explicitly delegates to Cursor, supply the minimum complete task-specific instructions and require proof of the local git status, tests, commit, push and final scope. Never infer that Cursor is active from its presence in old documentation.
 
 ## Post-push verification rule
 
@@ -190,50 +167,23 @@ After a push or merge, ChatGPT should verify the result on GitHub directly when 
 
 ## Orchestrator prompt compactness rule
 
-When preparing prompts for Claude Code, ChatGPT orchestrator must not repeat rules already versioned in `LLMS.md`, `docs/COMMANDS.md`, or `README.md`.
-
-The prompt should tell Claude Code to read and follow those files, then include only:
-- task-specific objective;
-- task IDs;
-- authorized/forbidden files if not already obvious;
-- validation commands;
-- commit/push instruction when applicable;
-- new temporary constraints needed for that batch.
-
-If a new rule should become permanent, ChatGPT orchestrator must tell the user that it should be added to the repository and must get user authorization before asking Claude Code to add it.
-
-Keep prompts compact. Avoid bureaucratic restatements of rules already stored in the repo.
+Avoid repeating constraints already versioned in `LLMS.md`, `docs/COMMANDS.md`, or `README.md`. Direct ChatGPT implementation uses concise task-specific scope and verifiable evidence. Cursor receives an independent complete prompt only after explicit user delegation. Do not refer work to an unavailable external agent.
 
 ## Implementation prompt requirements
 
-Prompts to Claude Code must include: preflight commands, explicit file scope, validation commands, git diff/status checks, and commit instructions. This ensures the user does not need to run routine commands manually.
+When preparing an authorized Cursor handoff, specify preflight, paths, invariants, allowed/forbidden actions, tests and final report. For direct ChatGPT work, use only actually connected tools and distinguish GitHub verification from local tests not executed.
 
-## Auto-push authorization
+## Remote update policy
 
-Claude Code may run `git push origin main` automatically after:
-- tests pass;
-- commit succeeds;
-- branch is main;
-- workspace is clean post-commit;
-- only authorized files are included;
-- no reports/ artifacts committed.
-
-Claude Code must stop before push on any blocker: dirty or misaligned workspace, branch not main, failed tests, push rejection or conflict, personal files, secrets, install, cloud/API, move/rename/delete.
+Follow repository gate rules: no automatic direct push to `main`, merge, deployment or destructive action without applicable authorization. Prefer an isolated branch and reviewable PR for recoverable code or documentation edits. Inspect the final diff and remote SHA; never force-push or rewrite historical commits.
 
 ## Division of labor: real gates vs. routine work
 
-Routine commit and push can be handled by Claude Code under standing authorization. User intervention is required for: merge PRs, conflicts, installs, secrets, API/cloud, personal files, destructive operations, implementer switch, or dirty workspace.
+ChatGPT handles scoped, recoverable analysis and edits directly when capable. Cursor may assist only on explicit request. The user decides on personal-file operations, installs, credentials, cloud or API use, and other safety gates. No agent has standing permission to bypass those gates.
 
-## Final output requirement for pushed batches
+## Final output requirement for implemented changes
 
-Claude Code final output after an implementation batch must include:
-- preflight result;
-- validation result;
-- files changed;
-- commit hash;
-- push result;
-- final `git status --short --branch`;
-- confirmation that reports/ and personal files were not committed.
+Provide preflight evidence, tests actually executed or NOT_CHECKED, files changed, commit and remote result, final branch SHA, and residual risks. Never assert a clean local workspace when it was not inspected. Confirm no reports or personal files were included.
 
 ## Task ID uniqueness rule
 

@@ -1,6 +1,6 @@
 # Safety Rules — Archivio Personale AI
 
-These rules apply to all phases and all implementers (ChatGPT, Claude Code, Codex).
+These rules apply to all phases: ChatGPT acts directly through available authorized tools; Cursor may support a task only on explicit user delegation.
 
 ## Absolute prohibitions
 
